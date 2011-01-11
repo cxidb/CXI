@@ -1,0 +1,469 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.0 r9654"
+   sodipodi:docname="diagram_labels.svg">
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="5.6"
+     inkscape:cx="238.45928"
+     inkscape:cy="888.80508"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:window-width="1680"
+     inkscape:window-height="1002"
+     inkscape:window-x="-1"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0">
+    <inkscape:grid
+       id="grid3803"
+       type="xygrid" />
+  </sodipodi:namedview>
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient4680">
+      <stop
+         id="stop4682"
+         offset="0"
+         style="stop-color:#962727;stop-opacity:1;" />
+      <stop
+         id="stop4684"
+         offset="1"
+         style="stop-color:#da9191;stop-opacity:1;" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient4674">
+      <stop
+         id="stop4676"
+         offset="0"
+         style="stop-color:#962727;stop-opacity:1;" />
+      <stop
+         id="stop4678"
+         offset="1"
+         style="stop-color:#6ca8ff;stop-opacity:1;" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient4329">
+      <stop
+         style="stop-color:#bb0707;stop-opacity:1;"
+         offset="0"
+         id="stop4331" />
+      <stop
+         style="stop-color:#d48080;stop-opacity:1;"
+         offset="1"
+         id="stop4333" />
+    </linearGradient>
+    <marker
+       inkscape:stockid="Arrow1Mstart"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mstart"
+       style="overflow:visible">
+      <path
+         id="path4030"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none"
+         transform="scale(0.4) translate(10,0)" />
+    </marker>
+    <marker
+       style="overflow:visible;"
+       id="Arrow1Mend"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1Mend">
+      <path
+         transform="scale(0.4) rotate(180) translate(10,0)"
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none;"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path4033" />
+    </marker>
+    <linearGradient
+       id="linearGradient4011">
+      <stop
+         style="stop-color:#d58d0b;stop-opacity:1;"
+         offset="0"
+         id="stop4013" />
+      <stop
+         style="stop-color:#fcc55d;stop-opacity:1;"
+         offset="1"
+         id="stop4015" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3884">
+      <stop
+         id="stop3886"
+         offset="0"
+         style="stop-color:#347b20;stop-opacity:1;" />
+      <stop
+         id="stop3888"
+         offset="1"
+         style="stop-color:#7acf71;stop-opacity:1;" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3868">
+      <stop
+         id="stop3870"
+         offset="0"
+         style="stop-color:#783b1f;stop-opacity:1;" />
+      <stop
+         id="stop3872"
+         offset="1"
+         style="stop-color:#cf9c71;stop-opacity:1;" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3771">
+      <stop
+         style="stop-color:#275f96;stop-opacity:1;"
+         offset="0"
+         id="stop3773" />
+      <stop
+         style="stop-color:#91afda;stop-opacity:1;"
+         offset="1"
+         id="stop3775" />
+    </linearGradient>
+    <linearGradient
+       gradientTransform="matrix(0.99390466,0,0,0.99794962,44.623373,29.728008)"
+       y2="105.83644"
+       x2="109.58755"
+       y1="83.108009"
+       x1="109.37384"
+       gradientUnits="userSpaceOnUse"
+       id="linearGradient3783"
+       xlink:href="#linearGradient3868"
+       inkscape:collect="always" />
+    <linearGradient
+       y2="105.83644"
+       x2="109.58755"
+       y1="83.108009"
+       x1="109.37384"
+       gradientTransform="matrix(0.98952318,0,0,1.0224147,225.04201,157.06339)"
+       gradientUnits="userSpaceOnUse"
+       id="linearGradient3851"
+       xlink:href="#linearGradient3884"
+       inkscape:collect="always" />
+    <linearGradient
+       y2="105.83644"
+       x2="109.58755"
+       y1="83.108009"
+       x1="109.37384"
+       gradientTransform="matrix(0.98952318,0,0,1.0224147,165.26523,112.0887)"
+       gradientUnits="userSpaceOnUse"
+       id="linearGradient3858"
+       xlink:href="#linearGradient3771"
+       inkscape:collect="always" />
+    <marker
+       style="overflow:visible;"
+       id="Arrow1MendH"
+       refX="0.0"
+       refY="0.0"
+       orient="auto"
+       inkscape:stockid="Arrow1MendH">
+      <path
+         transform="scale(0.4) rotate(180) translate(10,0)"
+         style="marker-start:none;stroke:#ce5c00;stroke-width:1.0pt;fill:#ce5c00;fill-rule:evenodd"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         id="path4499" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mstartz"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mstartz"
+       style="overflow:visible">
+      <path
+         id="path5547"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="marker-start:none;stroke:#ce5c00;stroke-width:1.0pt;fill:#ce5c00;fill-rule:evenodd"
+         transform="scale(0.4) translate(10,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow1Mstartv"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Mstartv"
+       style="overflow:visible">
+      <path
+         id="path5848"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="marker-start:none;stroke:#ce5c00;stroke-width:1.0pt;fill:#ce5c00;fill-rule:evenodd"
+         transform="scale(0.4) translate(10,0)" />
+    </marker>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4011"
+       id="linearGradient6691"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.84816273,0,0,0.6816098,130.75031,138.82965)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3771"
+       id="linearGradient6696"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.84816274,0,0,0.68160986,95.7503,113.82965)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3868"
+       id="linearGradient6702"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.84557981,0,0,0.66361559,61.128682,65.770879)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3884"
+       id="linearGradient6717"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.98952317,0,0,0.68160986,85.042017,88.82965)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+  </defs>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     style="display:inline"
+     inkscape:label="Layer"
+     id="layer2"
+     inkscape:groupmode="layer" />
+  <g
+     style="display:inline"
+     id="layer1"
+     inkscape:groupmode="layer"
+     inkscape:label="Layer 1">
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;display:inline;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="240"
+       y="156.67175"
+       id="text6725"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan6727"
+         x="240"
+         y="156.67175">HDF5 dataset</tspan></text>
+    <path
+       sodipodi:nodetypes="cccc"
+       style="fill:none;stroke:#ce5c00;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:8, 4;stroke-dashoffset:0;marker-start:url(#Arrow1Mstartv);marker-end:none;display:inline"
+       d="m 160,157.36218 -25,0 0,70 60,0"
+       id="path5498"
+       inkscape:connector-curvature="0" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text2991"
+       y="211.62004"
+       x="188.65663"
+       style="font-size:12px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       xml:space="preserve"><tspan
+         y="211.62004"
+         x="188.65663"
+         id="tspan2993"
+         sodipodi:role="line">entry_1</tspan></text>
+    <path
+       sodipodi:nodetypes="ccc"
+       inkscape:connector-curvature="0"
+       id="path3797"
+       d="m 155.22321,137.3875 0,14.97468 4.77679,0"
+       style="fill:none;stroke:#434343;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <rect
+       style="fill:#9f723c;fill-opacity:1;stroke:#e9b980;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="rect3777"
+       width="59.553585"
+       height="19.949371"
+       x="125.44642"
+       y="117.41281"
+       ry="1.9561079" />
+    <text
+       xml:space="preserve"
+       style="font-size:12.05601215px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="155.01129"
+       y="131.23741"
+       id="text3779"
+       sodipodi:linespacing="125%"><tspan
+         style="font-size:12.05601215px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr-tb;text-anchor:middle;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+         id="tspan3799"
+         sodipodi:role="line"
+         x="156.68312"
+         y="131.23741">/ </tspan></text>
+    <path
+       sodipodi:nodetypes="ccc"
+       inkscape:connector-curvature="0"
+       id="path3807"
+       d="m 189.78487,207.78839 0,15 5,0"
+       style="fill:none;stroke:#434343;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+    <rect
+       ry="2.0091488"
+       y="187.78839"
+       x="159.78487"
+       height="20.000004"
+       width="60"
+       id="rect3789"
+       style="fill:#1d6186;fill-opacity:1;stroke:#70a6c3;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    <text
+       transform="scale(0.98378322,1.0164841)"
+       sodipodi:linespacing="125%"
+       id="text3791"
+       y="198.93707"
+       x="192.87503"
+       style="font-size:12.05601215px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"><tspan
+         y="198.93707"
+         x="192.87503"
+         sodipodi:role="line"
+         id="tspan3146">class</tspan></text>
+    <rect
+       style="fill:#e9a759;fill-opacity:1;stroke:#e9b980;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="rect3818"
+       width="60"
+       height="20.000002"
+       x="194.78487"
+       y="212.78839"
+       ry="2.0091488" />
+    <text
+       transform="scale(0.98378331,1.016484)"
+       xml:space="preserve"
+       style="font-size:12.05601215px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="228.05754"
+       y="223.6965"
+       id="text3820"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3822"
+         x="228.05754"
+         y="223.6965">link</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3893"
+       y="131.7791"
+       x="195"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"><tspan
+         y="131.7791"
+         x="195"
+         id="tspan3895"
+         sodipodi:role="line">The root of the HDF5 file</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="229.78487"
+       y="200.84991"
+       id="text3897"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3899"
+         x="229.78487"
+         y="200.84991">HDF5 group</tspan></text>
+    <rect
+       ry="0"
+       y="162.36218"
+       x="165"
+       height="20.000004"
+       width="60"
+       id="rect4325"
+       style="fill:#40494e;fill-opacity:1;stroke:#688496;stroke-width:1;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    <rect
+       style="fill:#d28325;fill-opacity:1;stroke:#e9b980;stroke-width:1.08012342000000006;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="rect6715"
+       width="70"
+       height="20.000004"
+       x="160"
+       y="142.36218"
+       ry="2.0091488" />
+    <text
+       xml:space="preserve"
+       style="font-size:12.05601215px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="197.64928"
+       y="154.24754"
+       id="text6719"
+       sodipodi:linespacing="125%"
+       transform="scale(0.98378322,1.0164841)"><tspan
+         sodipodi:role="line"
+         id="tspan6721"
+         x="197.64928"
+         y="154.24754">member</tspan></text>
+    <path
+       style="fill:none;stroke:#434343;stroke-width:1.22487414;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 155.22321,137.3875 0,59.97468 4.77679,0"
+       id="path6723"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="264.78488"
+       y="227.17999"
+       id="text3948"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3950"
+         x="264.78488"
+         y="227.17999">HDF5 link</tspan></text>
+    <text
+       transform="scale(0.98378322,1.0164841)"
+       sodipodi:linespacing="125%"
+       id="text4339"
+       y="174.00562"
+       x="198.21146"
+       style="font-size:12.05601215px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"><tspan
+         y="174.00562"
+         x="198.21146"
+         id="tspan4341"
+         sodipodi:role="line">attribute</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4343"
+       y="176.75378"
+       x="235"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;display:inline;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"><tspan
+         y="176.75378"
+         x="235"
+         id="tspan4345"
+         sodipodi:role="line">HDF5 attribute</tspan></text>
+  </g>
+</svg>

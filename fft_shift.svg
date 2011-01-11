@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   sodipodi:version="0.32"
+   inkscape:version="0.48.0 r9654"
+   sodipodi:docname="fft_shift.svg"
+   inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90"
+   version="1.1">
+  <defs
+     id="defs4">
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lend"
+       style="overflow:visible;">
+      <path
+         id="path4856"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;marker-start:none;"
+         transform="scale(0.8) rotate(180) translate(12.5,0)" />
+    </marker>
+    <marker
+       inkscape:stockid="Arrow2Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow2Lend"
+       style="overflow:visible;">
+      <path
+         id="path4838"
+         style="font-size:12.0;fill-rule:evenodd;stroke-width:0.62500000;stroke-linejoin:round;"
+         d="M 8.7185878,4.0337352 L -2.2072895,0.016013256 L 8.7185884,-4.0017078 C 6.9730900,-1.6296469 6.9831476,1.6157441 8.7185878,4.0337352 z "
+         transform="scale(1.1) rotate(180) translate(1,0)" />
+    </marker>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4052">
+      <rect
+         inkscape:export-ydpi="90"
+         inkscape:export-xdpi="90"
+         inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/path16556.png"
+         style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect4050"
+         width="310.58701"
+         height="214.50728"
+         x="202.62621"
+         y="402.31708"
+         ry="3.5355341"
+         rx="3.5355341" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4057">
+      <rect
+         inkscape:export-ydpi="90"
+         inkscape:export-xdpi="90"
+         inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/path16556.png"
+         style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect4055"
+         width="310.58701"
+         height="214.50728"
+         x="202.62621"
+         y="402.31708"
+         ry="3.5355341"
+         rx="3.5355341" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4062">
+      <rect
+         inkscape:export-ydpi="90"
+         inkscape:export-xdpi="90"
+         inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/path16556.png"
+         style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect4060"
+         width="310.58701"
+         height="214.50728"
+         x="401"
+         y="37.362183"
+         ry="3.5355341"
+         rx="3.5355341"
+         transform="scale(-1,-1)" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4067">
+      <rect
+         inkscape:export-ydpi="90"
+         inkscape:export-xdpi="90"
+         inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/path16556.png"
+         style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect4065"
+         width="310.58701"
+         height="214.50728"
+         x="202.3456"
+         y="187.57138"
+         ry="3.5355341"
+         rx="3.5355341" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4072">
+      <rect
+         inkscape:export-ydpi="90"
+         inkscape:export-xdpi="90"
+         inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/path16556.png"
+         style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect4070"
+         width="310.58701"
+         height="214.50728"
+         x="-108.5816"
+         y="187.90688"
+         ry="3.5355341"
+         rx="3.5355341" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath4077">
+      <rect
+         inkscape:export-ydpi="90"
+         inkscape:export-xdpi="90"
+         inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/path16556.png"
+         style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+         id="rect4075"
+         width="310.58701"
+         height="214.50728"
+         x="-108.5382"
+         y="401.98337"
+         ry="3.5355341"
+         rx="3.5355341" />
+    </clipPath>
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     gridtolerance="10.3"
+     guidetolerance="10"
+     objecttolerance="10"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.98994949"
+     inkscape:cx="230.38629"
+     inkscape:cy="960.57484"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="true"
+     inkscape:grid-points="false"
+     inkscape:grid-bbox="false"
+     inkscape:window-width="1278"
+     inkscape:window-height="992"
+     inkscape:window-x="98"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="opacity:1;fill:white;fill-opacity:1;stroke:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="rect5858"
+       width="709.12708"
+       height="229.30463"
+       x="15.152288"
+       y="34.128418"
+       ry="3.5355341"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <rect
+       inkscape:export-ydpi="180"
+       inkscape:export-xdpi="180"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       ry="2.2728434"
+       y="43.362183"
+       x="31"
+       height="214.50728"
+       width="310.58701"
+       id="rect4080"
+       style="opacity:0.5;fill:black;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       rx="2.2728434" />
+    <rect
+       style="opacity:1;fill:#a3b6bf;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect1874"
+       width="310.58701"
+       height="214.50728"
+       x="25"
+       y="37.362183"
+       ry="2.2728434"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       sodipodi:type="arc"
+       style="opacity:1;fill:#d28325;fill-opacity:1;stroke:#005b28;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path10194"
+       sodipodi:cx="202.0305"
+       sodipodi:cy="164.94318"
+       sodipodi:rx="81.317284"
+       sodipodi:ry="81.317284"
+       d="M 224.06705,243.21764 A 81.317284,81.317284 0 1 1 226.58685,242.46405"
+       sodipodi:start="1.2963701"
+       sodipodi:end="7.5472107"
+       sodipodi:open="true"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       sodipodi:type="arc"
+       style="opacity:1;fill:#1d6186;fill-opacity:1;stroke:#00315b;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1"
+       id="path8422"
+       sodipodi:cx="202.0305"
+       sodipodi:cy="164.94318"
+       sodipodi:rx="59.598999"
+       sodipodi:ry="60.104076"
+       d="M 218.18151,222.79821 A 59.598999,60.104076 0 1 1 220.02832,222.24121"
+       sodipodi:start="1.2963701"
+       sodipodi:end="7.5472107"
+       sodipodi:open="true"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1"
+       d="M 202.5,37.862183 L 202.5,252.80053"
+       id="path2764"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:0;stroke-dasharray:none"
+       d="M 26.036456,164.86218 L 335,164.86218"
+       id="path2766"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       style="opacity:1;fill:none;fill-opacity:1;fill-rule:evenodd;stroke:black;stroke-width:2.20000005;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-mid:none;marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:8.80000019, 2.20000005;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 275.71429,188.07647 C 277.14286,88.790752 182.14287,97.362176 160.71429,98.076466"
+       id="path4682"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:2.20000005;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-mid:none;marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:8.80000019,2.20000005;stroke-opacity:1;stroke-dashoffset:0"
+       d="M 223.9,128.46218 C 173.9,133.46218 168.9,138.46218 158.9,198.46218"
+       id="path4868"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       sodipodi:nodetypes="cc"
+       id="path4870"
+       d="M 171.1,206.26218 C 221.1,201.26218 226.1,196.26218 236.1,136.26218"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:2.20000005;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-mid:none;marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:8.80000019,2.20000005;stroke-opacity:1;stroke-dashoffset:0"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       sodipodi:nodetypes="cc"
+       id="path4872"
+       d="M 122.085,138.46218 C 119.94215,239.89076 217.085,229.17647 237.08501,228.46218"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:2.20000005;stroke-linecap:butt;stroke-linejoin:miter;marker-start:none;marker-mid:none;marker-end:url(#Arrow2Lend);stroke-miterlimit:4;stroke-dasharray:8.80000019,2.20000005;stroke-opacity:1;stroke-dashoffset:0"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <rect
+       inkscape:export-ydpi="180"
+       inkscape:export-xdpi="180"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       style="opacity:0.5;fill:black;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       id="rect4971"
+       width="310.58701"
+       height="214.50728"
+       x="407"
+       y="43.362183"
+       ry="3.5355341"
+       rx="3.5355341" />
+    <rect
+       ry="0"
+       y="-252.45802"
+       x="-711.58698"
+       height="214.50728"
+       width="310.58701"
+       id="rect12851"
+       style="fill:#a3b6bf;fill-opacity:1;stroke:black;stroke-width:1.68499993999999997;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       transform="scale(-1,-1)"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180"
+       clip-path="url(#clipPath4062)" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#d28325;fill-opacity:1;stroke:#005b28;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 400.81065,171.38455 0,81.125 81.21875,0 c -0.0295,-7.21156 -1.01333,-14.53379 -3.0625,-21.8125 -10.08237,-35.81285 -42.6898,-59.26563 -78.15625,-59.3125 z"
+       id="path12961" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#1d6186;fill-opacity:1;stroke:#00315b;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 400.81065,192.63455 0,59.875 59.46875,0 c -0.0267,-5.31133 -0.72239,-10.70235 -2.21875,-16.0625 -7.386,-26.4576 -31.27052,-43.7612 -57.25,-43.8125 z"
+       id="path12958" />
+    <path
+       id="path12857"
+       d="M 534.087,251.96071 L 534.087,38.177697"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:0.99730879;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       id="path12859"
+       d="M 711.30693,124.95802 L 401.58822,124.95802"
+       style="fill:none;fill-opacity:0.75;fill-rule:evenodd;stroke:black;stroke-width:1.0012213;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:0;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#d28325;fill-opacity:1;stroke:#005b28;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 400.8738,37.76385 0,81.5625 c 7.13101,-0.0432 14.36823,-1.0371 21.5625,-3.0625 l 2.53125,-0.75 c 34.70176,-10.9925 56.92307,-43.03414 56.78125,-77.75 l -80.875,0 z"
+       id="path12942" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#1d6186;fill-opacity:1;stroke:#00315b;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 400.8738,37.76385 0,60.3125 c 5.18754,-0.0424 10.45519,-0.73322 15.6875,-2.21875 l 1.84375,-0.5625 c 25.45299,-8.13109 41.72282,-31.84911 41.59375,-57.53125 l -59.125,0 z"
+       id="path12945" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#d28325;fill-opacity:1;stroke:#005b28;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 711.73785,171.04905 c -7.32313,-0.01 -14.7616,0.98069 -22.15625,3.0625 -35.89722,10.10612 -59.37605,42.84281 -59.3125,78.40625 l 81.46875,0 0,-81.46875 z"
+       id="path12979" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#1d6186;fill-opacity:1;stroke:#00315b;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 710.30035,192.29905 c -4.91356,0.11109 -9.89569,0.84517 -14.84375,2.25 -26.31949,7.4725 -43.49685,31.67147 -43.4375,57.96875 l 59.71875,0 0,-60.21875 c -0.47956,-9.5e-4 -0.9566,-0.0109 -1.4375,0 z"
+       id="path12974" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#d28325;fill-opacity:1;stroke:#005b28;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 630.2257,37.7538 c -0.0504,7.4643 0.93912,15.05145 3.0625,22.59375 10.10612,35.89722 42.84282,59.37606 78.40625,59.3125 l 0,-81.90625 -81.46875,0 z"
+       id="path12993" />
+    <path
+       inkscape:connector-curvature="0"
+       style="fill:#1d6186;fill-opacity:1;stroke:#00315b;stroke-width:1.39999998000000003;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       d="m 651.9757,37.7538 c -0.0517,5.56698 0.64789,11.21673 2.21875,16.84375 7.40971,26.54253 31.4237,43.87235 57.5,43.8125 l 0,-60.65625 -59.71875,0 z"
+       id="path12988" />
+    <rect
+       ry="3.5355341"
+       y="37.362183"
+       x="401"
+       height="214.50728"
+       width="310.58701"
+       id="rect13002"
+       style="opacity:1;fill:none;fill-opacity:1;stroke:black;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       sodipodi:nodetypes="cccccccccc"
+       id="path18330"
+       d="M 436.4291,159.86219 L 396.53176,178.75938 L 356.63441,197.65657 L 356.63441,178.73932 L 308.06942,178.37128 L 308.18005,140.61201 L 356.63441,140.965 L 356.63441,122.06781 L 396.53176,140.965 L 436.4291,159.86219 z "
+       style="fill:black;fill-opacity:1;stroke:black;stroke-width:4.36446857;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1;opacity:0.5"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180" />
+    <path
+       style="fill:#1c1e1f;fill-opacity:1;stroke:none;stroke-width:4.36446856999999966;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-dashoffset:0;stroke-opacity:1"
+       d="M 428.4291,149.86219 L 388.53176,168.75938 L 348.63441,187.65657 L 348.63441,168.73932 L 300.06942,168.37128 L 300.18005,130.61201 L 348.63441,130.965 L 348.63441,112.06781 L 388.53176,130.965 L 428.4291,149.86219 z "
+       id="path16556"
+       sodipodi:nodetypes="cccccccccc"
+       inkscape:export-xdpi="180"
+       inkscape:export-ydpi="180"
+       inkscape:export-filename="/home/filipe/Imaging/Hamburg/uwrap/uwrap/doc/fft_shift.png" />
+  </g>
+</svg>

@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="744.09448819"
+   height="1052.3622047"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.0 r9654"
+   sodipodi:docname="minimal_cxi.svg">
+  <defs
+     id="defs4">
+    <linearGradient
+       id="linearGradient3884">
+      <stop
+         style="stop-color:#347b20;stop-opacity:1;"
+         offset="0"
+         id="stop3886" />
+      <stop
+         style="stop-color:#7acf71;stop-opacity:1;"
+         offset="1"
+         id="stop3888" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3868">
+      <stop
+         style="stop-color:#783b1f;stop-opacity:1;"
+         offset="0"
+         id="stop3870" />
+      <stop
+         style="stop-color:#cf9c71;stop-opacity:1;"
+         offset="1"
+         id="stop3872" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3771">
+      <stop
+         id="stop3773"
+         offset="0"
+         style="stop-color:#275f96;stop-opacity:1;" />
+      <stop
+         id="stop3775"
+         offset="1"
+         style="stop-color:#91afda;stop-opacity:1;" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3868"
+       id="linearGradient3783"
+       gradientUnits="userSpaceOnUse"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644"
+       gradientTransform="matrix(0.99390466,0,0,0.99794962,44.623373,29.728008)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3884"
+       id="linearGradient3851"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.98952318,0,0,1.0224147,225.04201,157.06339)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3771"
+       id="linearGradient3858"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.98952318,0,0,1.0224147,165.26523,112.0887)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3771"
+       id="linearGradient3980"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.98952318,0,0,1.0224147,165.26523,202.06339)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient3884"
+       id="linearGradient3998"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.98952318,0,0,1.0224147,225.04201,247.48948)"
+       x1="109.37384"
+       y1="83.108009"
+       x2="109.58755"
+       y2="105.83644" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="2.8"
+     inkscape:cx="259.50286"
+     inkscape:cy="875.16376"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1648"
+     inkscape:window-height="1028"
+     inkscape:window-x="-5"
+     inkscape:window-y="0"
+     inkscape:window-maximized="0">
+    <inkscape:grid
+       type="xygrid"
+       id="grid3803" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="Layer"
+     style="display:inline" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline">
+    <rect
+       style="fill:#1d6186;fill-opacity:1;stroke:#70a6c3"
+       id="rect3789"
+       width="70"
+       height="30.000004"
+       x="180.22321"
+       y="147.3875"
+       ry="3.0137234" />
+    <text
+       xml:space="preserve"
+       style="font-size:12.07001495px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#1d6186;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       x="196.16621"
+       y="162.73035"
+       id="text3791"
+       sodipodi:linespacing="125%"
+       transform="scale(0.98378325,1.0164841)"><tspan
+         sodipodi:role="line"
+         id="tspan3793"
+         x="196.16621"
+         y="162.73035">entry_1</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12.03500652px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="216.29272"
+       y="166.19383"
+       id="text2991"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan2993"
+         x="216.29272"
+         y="166.19383">entry_1</tspan></text>
+    <path
+       style="fill:none;stroke:#1c1e1f;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 155.22321,137.3875 0,25 25,0"
+       id="path3797"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="ccc" />
+    <rect
+       ry="2.9416084"
+       y="107.3875"
+       x="120.22321"
+       height="30"
+       width="70"
+       id="rect3777"
+       style="fill:#9f723c;fill-opacity:1;stroke:#e9b980;stroke-width:0.99592506999999997;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text3779"
+       y="126.20488"
+       x="155.22321"
+       style="font-size:12.03500652px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"><tspan
+         y="126.20488"
+         x="157.30914"
+         sodipodi:role="line"
+         id="tspan3799"
+         style="font-size:12.03500652px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;writing-mode:lr;text-anchor:middle;font-family:Century Gothic;-inkscape-font-specification:Century Gothic">/ </tspan></text>
+    <path
+       style="fill:none;stroke:#1c1e1f;stroke-width:1;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 215.22321,177.38749 0,30 25.00128,0"
+       id="path3807"
+       inkscape:connector-curvature="0" />
+    <rect
+       ry="3.0137231"
+       y="192.3875"
+       x="240.22321"
+       height="30.000002"
+       width="70"
+       id="rect3818"
+       style="fill:#1d6186;fill-opacity:1;stroke:#70a6c3;stroke-width:1.00583446000000021;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0" />
+    <text
+       sodipodi:linespacing="125%"
+       id="text3820"
+       y="207.18626"
+       x="279.98688"
+       style="font-size:12.03500656px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"
+       transform="scale(0.98378331,1.016484)"><tspan
+         y="207.18626"
+         x="279.98688"
+         id="tspan3822"
+         sodipodi:role="line">data_1</tspan></text>
+    <path
+       inkscape:connector-curvature="0"
+       id="path3836"
+       d="m 274.99999,222.36218 0,30 25.00128,0"
+       style="fill:none;stroke:#1c1e1f;stroke-width:1.01197124000000005px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    <rect
+       style="fill:#d28325;fill-opacity:1;stroke:#e9b980;stroke-width:1.00583446000000021;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0"
+       id="rect3840"
+       width="70"
+       height="30.000002"
+       x="300"
+       y="237.36218"
+       ry="3.0137231" />
+    <text
+       transform="scale(0.98378331,1.016484)"
+       xml:space="preserve"
+       style="font-size:12.03500656px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="340.74902"
+       y="252.76944"
+       id="text3842"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3844"
+         x="340.74902"
+         y="252.76944">data</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#1c1e1f;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="200.22321"
+       y="126.7791"
+       id="text3893"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3895"
+         x="200.22321"
+         y="126.7791">The root of the HDF5 file</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3897"
+       y="165.72148"
+       x="260.22321"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#1c1e1f;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       xml:space="preserve"><tspan
+         y="165.72148"
+         x="260.22321"
+         id="tspan3899"
+         sodipodi:role="line">The first shot/exposure in the file</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#1c1e1f;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="320"
+       y="203.22148"
+       id="text3901"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         x="320"
+         y="203.22148"
+         id="tspan3909">The first dataset/CCD image</tspan><tspan
+         sodipodi:role="line"
+         x="320"
+         y="218.22148"
+         id="tspan4268">of the first shot/exposure</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:12px;font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#1c1e1f;fill-opacity:1;stroke:none;font-family:Century Gothic;-inkscape-font-specification:Century Gothic"
+       x="380.22321"
+       y="255.61414"
+       id="text3911"
+       sodipodi:linespacing="125%"><tspan
+         sodipodi:role="line"
+         id="tspan3913"
+         x="380.22321"
+         y="255.61414">The raw image data</tspan></text>
+  </g>
+</svg>
