@@ -4,7 +4,7 @@ import h5py
 import numpy as np
 import math
 
-fileName = "minimal_cxi.cxi"
+fileName = "minimal.cxi"
 # open the HDF5 CXI file for writing
 f = h5py.File(fileName, "w")
 
