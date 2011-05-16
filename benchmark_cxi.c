@@ -1,19 +1,28 @@
 #include <stdlib.h>
 #include <hdf5.h>
 #include <math.h>
-#include <time.h>
+#include <sys/time.h>
 
 
+
+double clock_s(){
+  struct timeval tp;
+  gettimeofday(&tp,NULL);
+  return tp.tv_sec+tp.tv_usec*1.0e-6;
+}
 
 void writeGroups(const char * fileName, int n){
-  hid_t f = H5Fcreate(fileName,H5F_ACC_TRUNC, H5P_DEFAULT,H5P_DEFAULT);
+  double t_i = clock_s();  
+  printf("Entering writeGroups at %f\n",t_i);
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_libver_bounds(fapl,H5F_LIBVER_LATEST,H5F_LIBVER_LATEST);
+  hid_t f = H5Fcreate(fileName,H5F_ACC_TRUNC, H5P_DEFAULT,fapl);
   hsize_t dims[] = {1024,1024};
   int data_size = dims[0]*dims[1];
   int * data = malloc(sizeof(int)*data_size);
   for(int i = 0;i<data_size;i++){
     data[i] = rand();
   }
-  clock_t t_i = clock();
   for(int i = 0;i<n;i++){
     char buffer[1024];
     sprintf(buffer,"entry_%d",i);
@@ -31,19 +40,24 @@ void writeGroups(const char * fileName, int n){
     H5Gclose(entry);        
   }
   H5Fclose(f);
-  clock_t t_e = clock();
-  float dt = ((float)(t_e-t_i))/CLOCKS_PER_SEC;
+  H5close();
+  free(data);
+  double t_e = clock_s();
+  printf("Exiting writeGroups at %f\n",t_e);
+  float dt = t_e-t_i;
   printf("Write %d groups time used = %fs\n",n,dt);
   printf("Writing time per group = %fms\n",1000.0*dt/n);
-  free(data);
 }
 
 void readGroups(const char * fileName, int n, int to_read){
+  double t_i = clock_s();
+  printf("Entering readGroups at %f\n",t_i);
   hsize_t dims[] = {1024,1024};
   int data_size = dims[0]*dims[1];
   int * data = malloc(sizeof(int)*data_size);
-  clock_t t_i = clock();
-  hid_t f = H5Fopen(fileName, H5F_ACC_RDONLY,H5P_DEFAULT);
+  hid_t fapl = H5Pcreate(H5P_FILE_ACCESS);
+  H5Pset_libver_bounds(fapl,H5F_LIBVER_LATEST,H5F_LIBVER_LATEST);
+  hid_t f = H5Fopen(fileName, H5F_ACC_RDONLY,fapl);
   for(int i = 0;i<to_read;i++){
     int j = rand()%n;
     char buffer[1024];
@@ -56,18 +70,21 @@ void readGroups(const char * fileName, int n, int to_read){
     H5Dclose(dataset);
   }
   H5Fclose(f);
-  clock_t t_e = clock();
-  float dt = ((float)(t_e-t_i))/CLOCKS_PER_SEC;
-  printf("Read %d groups time used = %fs\n",n,dt);
-  printf("Reading time per group = %fms\n",1000.0*dt/n);
-
+  H5close();
   free(data);
+  double t_e = clock_s();
+  printf("Exiting readGroups at %f\n",t_e);
+  float dt = t_e-t_i;
+  printf("Read %d groups time used = %fs\n",to_read,dt);
+  printf("Reading time per group = %fms\n",1000.0*dt/to_read);
 }
 
 
 int main(){
   for(int i = 5;i<18;i++){
-    writeGroups("groupsBench.cxi",pow(2,i));
-    readGroups("groupsBench.cxi",pow(2,i),pow(2,i));
+    char buffer[1024];
+    sprintf(buffer,"groupsBench-%d.cxi",i);
+    writeGroups(buffer,pow(2,i));
+    readGroups(buffer,pow(2,i),1000);
   }
 }

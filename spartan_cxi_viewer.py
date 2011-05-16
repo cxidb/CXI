@@ -3,7 +3,8 @@ import h5py
 import sys
 from PyQt4 import QtGui, QtCore, Qt
 import matplotlib.pyplot as plt
-    
+from operator import mul
+
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
@@ -29,7 +30,7 @@ class Viewer(QtGui.QMainWindow):
                     self.buildBranch(group[g],child)
                     item.addChild(child)                                    
                 else:
-                    if(not group[g].shape):
+                    if(not group[g].shape or reduce(mul,group[g].shape) < 10):
                         lst.append(str(group[g][()]))
                     else:
                         lst.append("Click to display")
