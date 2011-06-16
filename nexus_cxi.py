@@ -15,20 +15,22 @@ f.create_dataset("cxi_version",data=100)
 
 # create data 1
 x = np.arange(-5, 5, 0.1)
-y = np.arange(-5, 5, 0.2)
+y = np.arange(0, 5, 0.1)
 xx, yy = np.meshgrid(x, y)
 sinc1 = np.sin(xx**2+yy**2)/(xx**2+yy**2)
 
 # create data 2
 x = np.arange(-1, 1, 0.02)
-y = np.arange(-1, 1, 0.04)
+y = np.arange(0, 1, 0.02)
 xx, yy = np.meshgrid(x, y)
 sinc2 = np.sin(xx**2+yy**2)/(xx**2+yy**2)
 
 # populate the file with the classes tree    
 entry_1 = f.create_group("entry_1")
-entry_1.create_dataset("experimental_identifier",data="LCLS_2009_Dec11_170451_21963")
-entry_1.create_dataset("start_time",data="2009-12-11T17:04:51-0800")
+entry_1.create_dataset("experimental_identifier",data=
+                       "LCLS_2009_Dec11_170451_21963")
+entry_1.create_dataset("start_time",data=
+                       "2009-12-11T17:04:51-0800")
 entry_1.attrs['NX_class'] = "NXentry"
 
 sample_1 = entry_1.create_group("sample_1")
@@ -40,14 +42,16 @@ instrument_1.create_dataset("name",data="AMO")
 instrument_1.attrs['NX_class'] = "NXinstrument"
 
 source_1 = instrument_1.create_group("source_1")
-energy = source_1.create_dataset("energy",data=1803.4) # in eV
-energy.attrs['units'] = "eV"
-pulse_width = source_1.create_dataset("pulse_width",data=70) # in fs
-pulse_width.attrs['units'] = "fs"
+energy = source_1.create_dataset("energy",data=2.8893e-16) # in J
+energy.attrs['units'] = "J"
+pulse_width = source_1.create_dataset("pulse_width",
+                                      data=70e-15) # in s
+pulse_width.attrs['units'] = "s"
 source_1.attrs['NX_class'] = "NXsource"
 
 detector_1 = instrument_1.create_group("detector_1")
-distance = detector_1.create_dataset("distance",data=0.15) # in meters
+distance = detector_1.create_dataset("distance",
+                                     data=0.15) # in meters
 distance.attrs['units'] = "m"
 data = detector_1.create_dataset("data",data=sinc1)
 data.attrs['signal'] = 1

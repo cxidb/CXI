@@ -13,6 +13,7 @@
 \usepackage{listings}
 \usepackage{array}
 \usepackage{tikz}
+\usepackage{amsmath}
 \renewcommand{\headrule}{{\color{brightOrange}%
   \hrule width\headwidth height\headrulewidth \vskip-\headrulewidth}}
 \renewcommand{\footrule}{{\color{brightOrange}%
@@ -282,7 +283,8 @@ H5Tinsert(complex_id, "i", sizeof(double), H5T_NATIVE_DOUBLE);
 \section{Default units for CXI entries}
 \label{units}
 
-The default units for all CXI entries are SI base units (see table \ref{table:SI}) except for those in table \ref{table:units}.
+The default units for all CXI entries are SI base units (see table
+\ref{table:SI}) with {\em no exceptions}.
 
 \begin{table}[h!]\sffamily \small
 \caption{SI (and common derived) base units for different quantities}
@@ -320,24 +322,6 @@ volume & cubic meter & m$^3$ \\
 \end{center}
 \end{table}
 
-\begin{table}[h!]\sffamily \small
-\caption{Quantities and Units for entries with default units different from the SI base units}
-\label{table:units}
-\begin{center}
-\rowcolors{1}{white}{tableBlue}
-\begin{tabular}{p{4.5cm} p{3cm}  p{4cm}}
-\toprule
-\bfseries Hierarchy     & \bfseries Quantity   & \bfseries Default units \\
-\midrule
-/data/data  & arbitrary  & counts \\
-/sample/unit\_cell & length & \AA~ (\AA ngstr\"{o}m) \\
-/sample/unit\_cell\_volume & volume & \AA$^3$~ (cubic \AA ngstr\"{o}m) \\
-/source/energy     & energy  & eV (electron Volts)\\
-/source/pulse\_width     & time  & fs (femtoseconds)\\
-\bottomrule
-\end{tabular}
-\end{center}
-\end{table}
 
 \subsection{Angles}
 Angles are always defined in degrees {\em not} in radians.
@@ -349,6 +333,11 @@ Note the ``T'' separating the data from the time and the ``+0600'' timezone spec
 All of these are mandatory.
 They derive from the use of ISO 8601 in NeXus. This way compatibility is ensured.
 
+\section{Memory Layout}
+All multidimensional arrays must be stored with the fastest changing
+dimension being the last dimension, and the slowest changing dimension
+being the first dimension, also known as row major. This is defined in
+the HDF5 standard.
 
 \section{Geometry}
 \subsection{Coordinate System}
@@ -371,9 +360,9 @@ beam meets the sample.
 \centering
 \includegraphics[width=0.6\textwidth]{coord_system.pdf}
 \caption{The coordinate system used by CXI. The intersection of the
- X-ray beam with the sample define the  origin of the system. The z
- axis is parallel to the beam and
- points downstream.}
+X-ray beam with the sample define the  origin of the system. The z
+axis is parallel to the beam and
+points downstream.}
 \label{fig:cxi_coord_system}
 \end{figure}
 
@@ -389,49 +378,68 @@ transformations we need to know what is the origin of the local
 coordinate system of each object.
 
 Unless otherwise specified the origin should be assumed to be the
-geometrical center of the object in question and the x axis should
-corresponds to the longest axis of the object, the y axis to the
-second longest and the z axis to the shortest.
+geometrical center of the object in question. The default orientation
+of the object should have the longest axis of the object aligned with
+the x axis, the second longest with the y axis and the shortest with
+the z axis.
 
-\subsubsection{The local coordinate system of CCD detectors}
+\subsubsection{The orientation of pixel detectors}
+\label{ccd_orientation}
 
-The location and orientation of CCDs is particular important for
+The location and orientation of pixel detectors is particularly important for
 diffraction experiments.
 
 For convenience specific rules have been defined for the coordinate
-system of CCD detectors.
-The origin is defined by the center of the smallest
-rectangle/rectangular cuboid enclosing all the pixels (see
-Fig. \ref{fig:object_origin}). 
+system of pixel detectors. Instead of defining a local origin plus a
+default orientation the detectors are defined in absolute terms by a
+corner\_position plus a set of basis\_vectors.
+
+The corner\_position should contain the x, y and z coordinates of the corner of
+the first data element which corresponds to the corner of the
+detector. The corner\_position must always be defined.
+  
+Figure \ref{fig:detector_coordinates} gives an example.
 
 \begin{figure}[h!]
-\centering
-\includegraphics[width=0.6\textwidth]{object_origin.pdf}
-\caption{The origin of a CCD detector is defined as the center of the
-smallest rectange enclosing all of its pixels.}
-\label{fig:object_origin}
+  \centering
+  \includegraphics[width=0.7\textwidth]{detector_coordinates.pdf}
+  \caption{The coordinates of the four corners of the first pixel in a
+    pixel detector.}
+  \label{fig:detector_coordinates}
 \end{figure}
- 
-The rules for the orientation of the axis of detectors are based on
-the dimensions of its data entry. The x axis is aligned with the first
-dimension of the data entry with the axis pointing in the direction of
-of the first pixel. The y axis is aligned with the second dimension
-with the axis pointing in the direction of the first pixel and
-analogously for the z axis (see Fig. \ref{fig:detector_orientation}
-and Fig. \ref{fig:detector_coord_system}).
 
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.4\textwidth]{detector_orientation.pdf}
-\caption{Diagram of the default orientation of a CCD detector.}
-\label{fig:detector_orientation}
-\end{figure}
+The basis\_vectors are a matrix containing a set of 3D vectors from the
+center of the first element to the center of the second element
+for each dimension of the detector. The number of rows of the matrix
+(first dimension) is equal to the number of dimensions of data and the
+number of columns (second dimension) is equal to 3 (the x, y and z position in 3D space).
+
+The first row then defines the relative distance between the first two
+pixels in the first dimension (e.g. position of (1,0) - position of
+(0,0) for a 2D array),
+and the second row elements do the same along the second dimension (e.g. position of
+(0,1) - position of (0,0) for a 2D array).
+
+If no basis\_vectors are specified they are assumed to be:
+\[
+ \begin{bmatrix}
+  0 & -y\_pixel\_size & 0 \\
+  -x\_pixel\_size & 0 & 0 
+\end{bmatrix}
+\]
+
+This results in the first dimension parallel to the y axis and the second to the x
+axis. This convention should be used as much as possible as many
+programs will assume it when displaying data. If more dimensions are
+required it's strongly encouraged to make the last two dimension
+correspond to the y and x axis.
 
 \begin{figure}[h!]
 \centering
 \includegraphics[width=\textwidth]{detector_coord_system.png}
-\caption{Coordinate system of a CCD detector with no rotation or
-  translation applied.}
+\caption{Pixel locations for a pixel detector with no basis\_vectors
+  defined or rotation applied and with a corner\_position of (pixel
+  width, pixel height, detector distance).}
 \label{fig:detector_coord_system}
 \end{figure}
 
@@ -581,17 +589,37 @@ and geometry should be stored in this class.
 \bfseries Member     & \bfseries Type & \bfseries Quantity \\
 \midrule
 
+
+basis\_vectors & float array & length \\ 
+corner\_position & 3 floats & length \\
+counts\_per\_eV & float & unitless \\ 
 data     & float/complex array & variable  \\
 data\_error & float/complex array & variable \\
 description & string & text \\
 distance     & float & length\\
-geometry\_1 & \hyperref[table:geometry]{Geometry class} & \\
+geometry\_1 &  \hyperref[table:geometry]{Geometry class} & \\
 mask & int array & unitless \\
 x\_pixel\_size & float & length  \\
 y\_pixel\_size & float & length \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\member{basis\_vectors}{A matrix with the basis vectors of the
+  detector data. For more details see \ref{ccd_orientation}.
+}
+
+\member{corner\_position}{The x, y and z coordinates of the corner of
+  the first data element. For more details see \ref{ccd_orientation}.
+}
+
+\member{counts\_per\_joule}{Number of counts recorded per each joule of
+  energy received by the detector. The number of incident photons can
+  then be calculated by:
+\begin{equation*}
+\text{number of photons} = \frac{\text{source energy} \times \text{data counts}}{\text{counts per joule}}
+\end{equation*}
+}
 
 \member{data}{Recorded signal values.}
 
@@ -604,10 +632,51 @@ y\_pixel\_size & float & length \\
 \member{distance}{Closest distance from the detector to
 the sample.}
 
-\member{geometry\_1}{The absolute position and orientation of the
-  detector.
-  Only one geometry entry per detector is allowed. When both
-  distance and geometry\_1 are present the latter takes precedence.
+\member{geometry\_1}{Position and orientation of the center of mass of
+  the detector. This should only be specified for non pixel
+  detectors. For pixel detectors use basis\_vectors and
+  corner\_position.}
+
+\member{mask}{Not all the pixels in a detector might have the same
+  value. This 32bit mask makes it possible to distinguish different
+  kinds of pixels.
+
+The following list defines the meaning of each
+bit when is it set, as well as the names of constants, defined in {\tt
+cxi.h}, useful for
+checkings their values:
+
+\begin{table}[h!]\footnotesize
+\caption{Definition of each bit in the mask}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}} l p{5.5cm} l}
+\toprule
+\sf \bfseries Bit & \sf \bfseries Meaning & \sf \bfseries Constant \\
+\midrule
+\tt \bfseries 0x00000001 & \sf If set the pixel is valid & \tt
+CXI\_PIXEL\_IS\_VALID\\
+\tt \bfseries 0x00000002 & \sf If set the pixel is saturated & \tt
+CXI\_PIXEL\_IS\_SATURATED\\
+\tt \bfseries 0x00000004 & \sf If set the pixel is hot & \tt CXI\_PIXEL\_IS\_HOT\\
+\tt \bfseries 0x00000008 & \sf If set the pixel is dead & \tt
+CXI\_PIXEL\_IS\_DEAD\\
+\tt \bfseries 0x00000010 & \sf If set the pixel is under a shadow &
+\tt CXI\_PIXEL\_IS\_SHADOWED\\
+\tt \bfseries 0x00000020 & \sf If set the pixel is iluminated by
+parasitic light &
+\tt CXI\_PIXEL\_IS\_PARASITIC\\
+\tt \bfseries 0x00000040 & \sf If set the pixel signal is above the background &
+\tt CXI\_PIXEL\_HAS\_SIGNAL\\
+\tt \bfseries 0x00000080 & \sf If set the pixel does not exist & \tt
+CXI\_PIXEL\_DOES\_NOT\_EXIST\\
+\tt \bfseries 0x00000100 & \sf If set the pixel is not exposed & \tt
+CXI\_PIXEL\_NOT\_EXPOSED\\
+\bottomrule
+\end{tabular*}
+\end{table}
+
+All other bits have no standard meaning and can be used for any
+purpose the user sees fit. More bits will be defined as the format
+evolves so users are encouranged to use the high bits to avoid collisions.
 }
 
 \member{x\_pixel\_size}{Width of each detector pixel.}

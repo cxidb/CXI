@@ -10,7 +10,7 @@ f = h5py.File(fileName, "w")
 f.create_dataset("cxi_version",data=100)
 
 # create data
-xx, yy, zz = np.mgrid[-5:5:16j, -5:5:16j, -5:5:16j]
+zz, yy, xx = np.mgrid[-5:5:8j, -5:5:12j, -5:5:16j]
 sinc = np.sin(xx**2+yy**2+zz**2)/(xx**2+yy**2+zz**2) + \
        1j*np.cos(xx**2+yy**2+zz**2)/(xx**2+yy**2+zz**2)
 
@@ -26,7 +26,7 @@ image_1.create_dataset("data_space",data="real")
 image_1.create_dataset("image_size",
                        data=[1.65e-6,1.65e-6,1.65e-6])
 source_1 = image_1.create_group("source_1")
-source_1.create_dataset("energy",data=1803.4) # in eV
+source_1.create_dataset("energy",data=2.8893e-16) # in J
 detector_1 = image_1.create_group("detector_1")
 detector_1.create_dataset("distance",
                           data=0.15) # in meters

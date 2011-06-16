@@ -10,7 +10,7 @@ f = h5py.File(fileName, "w")
 
 # create data
 x = np.arange(-5, 5, 0.1)
-y = np.arange(-5, 5, 0.2)
+y = np.arange(0, 5, 0.1)
 xx, yy = np.meshgrid(x, y)
 sinc = np.sin(xx**2+yy**2)/(xx**2+yy**2)
 
