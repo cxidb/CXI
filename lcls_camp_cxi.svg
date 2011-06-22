@@ -23,14 +23,14 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.98994949"
-     inkscape:cx="269.36206"
-     inkscape:cy="672.39811"
+     inkscape:zoom="1.979899"
+     inkscape:cx="350.17426"
+     inkscape:cy="631.99201"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      inkscape:window-width="1648"
-     inkscape:window-height="1028"
+     inkscape:window-height="1006"
      inkscape:window-x="41"
      inkscape:window-y="0"
      inkscape:window-maximized="0">
@@ -198,7 +198,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -217,7 +217,7 @@
          sodipodi:role="line"
          id="tspan6727"
          x="250"
-         y="155.61414">100 (int equivalent of 1.00)</tspan></text>
+         y="155.61414">110 (int equivalent of 1.10)</tspan></text>
   </g>
   <g
      style="display:inline"
@@ -245,7 +245,7 @@
          sodipodi:role="line"
          id="tspan3162"
          x="350"
-         y="480.61414">1803.4 (eV)</tspan></text>
+         y="480.61414">2.889E-16 (J)</tspan></text>
     <text
        sodipodi:linespacing="125%"
        id="text3174"
@@ -256,7 +256,7 @@
          y="505.61414"
          x="380"
          id="tspan3176"
-         sodipodi:role="line">70 (fs)</tspan></text>
+         sodipodi:role="line">70E-15 (s)</tspan></text>
     <path
        inkscape:connector-curvature="0"
        id="path4019"

@@ -49,8 +49,8 @@
 
 
 \fancyfoot{} % clear all header fields
-\fancyfoot[L]{\vspace{0.2cm}\includegraphics[width=0.35\textwidth]{cxidb_logo_header2.pdf}}
-\fancyfoot[R]{\vspace{0.15cm}\color{softBlue}\thepage}
+\fancyfoot[L]{\vspace{0.1cm}\includegraphics[width=0.35\textwidth]{cxidb_logo_header2.pdf}}
+\fancyfoot[R]{\vspace{1.0cm}\color{softBlue}\thepage}
 %\renewcommand{\footrulewidth}{1pt}
 
 
@@ -102,7 +102,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Draft Version 1.0}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Draft Version 1.1}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -592,9 +592,10 @@ and geometry should be stored in this class.
 
 basis\_vectors & float array & length \\ 
 corner\_position & 3 floats & length \\
-counts\_per\_eV & float & unitless \\ 
+counts\_per\_joule & float & unitless \\ 
 data     & float/complex array & variable  \\
 data\_error & float/complex array & variable \\
+data\_sum & float & variable \\
 description & string & text \\
 distance     & float & length\\
 geometry\_1 &  \hyperref[table:geometry]{Geometry class} & \\
@@ -624,8 +625,11 @@ y\_pixel\_size & float & length \\
 \member{data}{Recorded signal values.}
 
 \member{data\_error}{The best estimate of the uncertainty in the data
- value. Where possible, this should be the standard deviation, which
- has the same units as the data.}
+value. Where possible, this should be the standard deviation, which
+has the same units as the data.}
+
+\member{data\_sum}{Sum of all the elements in the data array. This
+  number is often userful as a cheap measure of data quality.}
 
 \member{description}{name/manufacturer/model/etc. information.}
 
@@ -1119,12 +1123,15 @@ Class describing the light source being used.
 \bfseries Member     & \bfseries Type & \bfseries Quantity \\
 \midrule
 energy     & float & energy  \\
+pulse\_energy  & float & energy  \\
 pulse\_width  & float & time  \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\member{energy}{Source energy.}
+\member{energy}{Energy of each photon.}
+
+\member{pulse\_energy}{Sum of the energy of all the photons in the pulse.}
 
 \member{pulse\_width}{Duration of the pulse.}
 
