@@ -102,7 +102,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Draft Version 1.1}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Version 1.2}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -855,7 +855,7 @@ image.}
 \end{figure}
 }
 
-\member{mask}{32-bit mask specifying the properties of each
+\member{mask}{32-bit unsigned integer mask specifying the properties of each
 pixel.
 
 The following list defines the meaning of each
@@ -883,6 +883,8 @@ parasitic light &
 \tt CXI\_PIXEL\_IS\_PARASITIC\\
 \tt \bfseries 0x00000040 & \sf If set the pixel signal is above the background &
 \tt CXI\_PIXEL\_HAS\_SIGNAL\\
+\tt \bfseries 0x00000200 & \sf If set the pixel is inside of the reconstruction support &
+\tt CXI\_PIXEL\_INSIDE\_SUPPORT\\
 \bottomrule
 \end{tabular*}
 \end{table}
@@ -1158,6 +1160,25 @@ distances & 3 floats & length \\
   relative to the origin of the global coordinate system (the place
   where the X-ray beam meets the sample).}
 \normalsize
+
+\clearpage
+\section{Changes from previous versions}
+\subsection{Version 1.1}
+\begin{itemize}
+\item{A new entry has been added to the mask of the \hyperref[table:image]{Image class}
+to represent the support used during the reconstruction of an image.}
+\item{Added a section(this section) listing all the changes from the
+    previous versions.}
+\end{itemize}
+
+\subsection{Version 1.0}
+\begin{itemize}
+\item{All quantities must now be in SI units, without exceptions.}
+\item{The \hyperref[ccd_orientation]{geometry of CCD detectors} is now represented by a series of
+    basis vectors representing the sides of the detector, as well as
+    the absolute corner position, instead of rotations and translations.}
+\end{itemize}
+
 
 \clearpage
 \section{Diagrams color code}
