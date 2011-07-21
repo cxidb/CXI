@@ -7,7 +7,7 @@ import math
 fileName = "phased_3d.cxi"
 # open the HDF5 CXI file for writing
 f = h5py.File(fileName, "w")
-f.create_dataset("cxi_version",data=100)
+f.create_dataset("cxi_version",data=120)
 
 # create data
 zz, yy, xx = np.mgrid[-5:5:8j, -5:5:12j, -5:5:16j]

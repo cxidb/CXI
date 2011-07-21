@@ -11,7 +11,7 @@ f = h5py.File(fileName, "w")
 f.attrs['NeXus_version'] = "4.3.0"
 f.attrs['creator'] = "CXI2NeXus"
 
-f.create_dataset("cxi_version",data=100)
+f.create_dataset("cxi_version",data=120)
 
 # create data 1
 x = np.arange(-5, 5, 0.1)
