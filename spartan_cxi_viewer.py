@@ -4,6 +4,7 @@ import sys
 from PyQt4 import QtGui, QtCore, Qt
 import matplotlib.pyplot as plt
 from operator import mul
+import numpy
 
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
@@ -14,7 +15,10 @@ class Viewer(QtGui.QMainWindow):
         self.tree.itemClicked.connect(self.handleClick)
     def handleClick(self,item,column):
         if(item.text(column) == "Click to display"):
-            plt.imshow(self.datasets[str(item.text(2))])
+            if(numpy.iscomplexobj(self.datasets[str(item.text(2))])):
+                plt.imshow(numpy.abs(self.datasets[str(item.text(2))]))
+            else:
+                plt.imshow(self.datasets[str(item.text(2))])
     def buildTree(self):
         self.datasets = {}
         self.tree.setColumnCount(2)
