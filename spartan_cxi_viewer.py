@@ -15,10 +15,13 @@ class Viewer(QtGui.QMainWindow):
         self.tree.itemClicked.connect(self.handleClick)
     def handleClick(self,item,column):
         if(item.text(column) == "Click to display"):
-            if(numpy.iscomplexobj(self.datasets[str(item.text(2))])):
-                plt.imshow(numpy.abs(self.datasets[str(item.text(2))]))
+            data = self.datasets[str(item.text(2))]
+            if(numpy.iscomplexobj(data)):
+                data = numpy.abs(data)
+            if(len(data.shape) == 1):
+                plt.plot(data)
             else:
-                plt.imshow(self.datasets[str(item.text(2))])
+                plt.imshow(data)
     def buildTree(self):
         self.datasets = {}
         self.tree.setColumnCount(2)
