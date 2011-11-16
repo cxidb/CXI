@@ -5,7 +5,20 @@ from PyQt4 import QtGui, QtCore, Qt
 import matplotlib.pyplot as plt
 from operator import mul
 import numpy
+import signal
+import scipy.interpolate
+import scipy.ndimage
 
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
+def onclick(event):
+    z = plt.gca().get_images()[0].get_array()
+    x = numpy.arange(0, z.shape[0], 1)
+    y = numpy.arange(0, z.shape[1], 1)
+    v = scipy.ndimage.map_coordinates(z, [[event.ydata], [event.xdata]], order=1)
+    print 'xdata=%f, ydata=%f value=%e'%(
+        event.xdata, event.ydata, v[0])
+    
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
@@ -16,12 +29,15 @@ class Viewer(QtGui.QMainWindow):
     def handleClick(self,item,column):
         if(item.text(column) == "Click to display"):
             data = self.datasets[str(item.text(2))]
+            fig = plt.figure()
+            ax = fig.add_axes([0, 0, 1, 1])            
             if(numpy.iscomplexobj(data)):
                 data = numpy.abs(data)
             if(len(data.shape) == 1):
                 plt.plot(data)
             else:
-                plt.imshow(data)
+                ax.imshow(data)
+                cid = fig.canvas.mpl_connect('button_press_event', onclick)
     def buildTree(self):
         self.datasets = {}
         self.tree.setColumnCount(2)

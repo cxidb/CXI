@@ -102,7 +102,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Version 1.2}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Version 1.2.1}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -932,6 +932,7 @@ corresponds to one beamline.
 name & string & text \\
 attenuator\_$N$ &  \hyperref[table:attenuator]{Attenuator class} & \\
 detector\_$N$ &  \hyperref[table:detector]{Detector class} & \\
+monochromator\_$N$ &  \hyperref[table:monochromator]{Monochromator class} & \\
 source\_$N$ &  \hyperref[table:source]{Source class} & \\
 \bottomrule
 \end{tabular}
@@ -945,6 +946,30 @@ source\_$N$ &  \hyperref[table:source]{Source class} & \\
 \member{detector\_$N$}{The detectors that compose the instrument.}
 
 \member{source\_$N$}{The source used by the instrument.}
+
+\subsection{Monochromator}
+\label{table:monochromator}
+
+Define a monochromator used in the instrument.
+
+\begin{table}[h!]\sffamily \footnotesize
+\caption{Monochromator class members}
+
+\rowcolors{1}{white}{tableBlue}
+\begin{tabular}{p{4.5cm} p{4.5cm}  p{2.5cm} }
+\toprule
+\bfseries Member     & \bfseries Type & \bfseries Quantity \\
+\midrule
+
+energy & float & energy \\
+energy\_error & float & energy \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\member{energy}{Peak of the spectrum that the  monochromator selects.}
+
+\member{energy\_error}{Standard deviation of the spectrum that the  monochromator selects.}
 
 \subsection{Note}
 \label{table:note}
@@ -1163,12 +1188,19 @@ distances & 3 floats & length \\
 
 \clearpage
 \section{Changes from previous versions}
-\subsection{Version 1.1}
+\subsection{Version 1.2.1}
+\begin{itemize}
+\item{Added a \hyperref[table:monochromator]{Monochromator class}.}
+\end{itemize}
+\subsection{Version 1.2}
 \begin{itemize}
 \item{A new entry has been added to the mask of the \hyperref[table:image]{Image class}
 to represent the support used during the reconstruction of an image.}
+\end{itemize}
+\subsection{Version 1.1}
+\begin{itemize}
 \item{Added a section(this section) listing all the changes from the
-    previous versions.}
+   previous versions.}
 \end{itemize}
 
 \subsection{Version 1.0}
