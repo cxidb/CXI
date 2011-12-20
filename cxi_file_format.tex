@@ -102,7 +102,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Version 1.2.1}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Version 1.3}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -243,12 +243,12 @@ compound type for double complex numbers.
 emph={[2]complex}, 
  emph={[3]H5Tcreate}, 
  emph={[4]H5Tinsert}, 
-emph={[5]sizeof}, 
+ emph={[5]sizeof}, 
  emph={[6]i}, 
  emph={[7]r},
  emph={[8]double}, 
  emph={[9]hid_t}, 
-caption={Creating a double complex type},
+ caption={Creating a double complex type},
   label=lst:complex_type,
   frame=b,
   basicstyle=\footnotesize\ttfamily,
@@ -443,6 +443,43 @@ correspond to the y and x axis.
 \label{fig:detector_coord_system}
 \end{figure}
 
+\section{Scans}
+\label{sec:scans}
+
+While for simplicity it preferable to keep only one image in each Entry
+class, often there are experiments where many images come together to
+form a single dataset. A common case is when one is obtaining multiple
+images of the same sample at different rotations to performance a
+tomographic reconstruction. We designate datasets such as these, where one or more
+variables are changed while images are collected, as {\em scans}.
+
+In a scan the multiple images are stored in a single 3D or higher
+dimensional dataset. This has both space and performance advantages,
+besides making sure the data is kept together. The variables being
+scanned should always be the first dimensions with the last dimensions
+reserved for the physical dimensions of the detector. For example in
+the case of a ptychographic dataset, where the translation of the
+sample is scanned, the dimensions of the data would be translation, y
+dimension of the CCD, x dimension of the CCD.
+
+\subsection{Dimension Scales}
+
+When using scans it is crucial to determine what variable corresponds
+to each dimension. To define this you need to use the {\em  axes
+  attribute}. The {\tt axes} attribute should specify a colon separated list
+of names of the datasets that correspond to each dimension. The named
+dataset, or a link to it, should exist in the same group as the
+field with the axes attribute. The exception to this rule are the
+names ``y'' and ``x'' which are assumed to correspond to the number of
+pixels of the detector in each dimension.
+
+For example in the case of tomorgraphy the {\tt axes} attribute of the
+{\tt data} field could have the value {\tt orientation:y:x} and in
+the same group there should be a link named {\tt orientation} that
+links to the orientation field of the sample being imaged. The ``x''
+and ``y'' are implicitly assumed to correspond to the detector
+dimensions.
+
 \clearpage
 \appendix
 \section{More CXI file examples}
@@ -452,7 +489,8 @@ correspond to the y and x axis.
 \begin{figure}[h!]
 \centering
 \includegraphics[width=0.9\textwidth]{ptychography_cxi.pdf}
-\caption{Diagram of a CXI file with 256 diffraction images from a ptychography experiment.}
+\caption{Diagram of a CXI file with 256 diffraction images recorded on
+  a 1024x1024 pixels CCD detector from a ptychography experiment.}
 \label{fig:ptychography_cxi}
 \end{figure}
 
@@ -593,9 +631,11 @@ and geometry should be stored in this class.
 basis\_vectors & float array & length \\ 
 corner\_position & 3 floats & length \\
 counts\_per\_joule & float & unitless \\ 
-data     & float/complex array & variable  \\
-data\_error & float/complex array & variable \\
+data     & float array & variable  \\
+data\_dark & float array & variable \\
+data\_error & float array & variable \\
 data\_sum & float & variable \\
+data\_white & float array & variable \\
 description & string & text \\
 distance     & float & length\\
 geometry\_1 &  \hyperref[table:geometry]{Geometry class} & \\
@@ -618,11 +658,14 @@ y\_pixel\_size & float & length \\
   energy received by the detector. The number of incident photons can
   then be calculated by:
 \begin{equation*}
-\text{number of photons} = \frac{\text{source energy} \times \text{data counts}}{\text{counts per joule}}
+\text{number of photons} = \frac{\text{data counts}}{\text{source energy} \times \text{counts per joule}}
 \end{equation*}
 }
 
 \member{data}{Recorded signal values.}
+
+\member{data\_dark}{Image recorded with the shutter closed, used for
+ background subtractions.}
 
 \member{data\_error}{The best estimate of the uncertainty in the data
 value. Where possible, this should be the standard deviation, which
@@ -630,6 +673,9 @@ has the same units as the data.}
 
 \member{data\_sum}{Sum of all the elements in the data array. This
   number is often userful as a cheap measure of data quality.}
+
+\member{data\_white}{Image recorded without the sample, used for
+ background subtractions.}
 
 \member{description}{name/manufacturer/model/etc. information.}
 
@@ -753,18 +799,18 @@ This class holds the general position and orientation of a component.
 \bfseries Member     & \bfseries Type & \bfseries Quantity \\
 \midrule
 
-orientation\_1 & \hyperref[table:orientation]{Orientation class} & \\
-translation\_1 & \hyperref[table:translation]{Translation class} &  \\
-
+orientation & 6 floats & unitless \\
+translation & 3 floats & length \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-\member{orientation\_1}{The rotation of the object with respect to the
-  coordinate system.}
+\member{orientation}{Dot products between the local and the global unit
+  vectors.}
 
-\member{translation\_1}{The position of the object with respect to the
-origin.}
+\member{translation}{The x, y and z components of the translation of the origin of the object
+ relative to the origin of the global coordinate system (the place
+ where the X-ray beam meets the sample).}
 
 Only one orientation and one translation is permitted in each geometry
 class.
@@ -772,6 +818,21 @@ class.
 The position of the origin of the object should be explicitly defined for each
 object. If it is not defined it should be assumed to be the center of
 the object.
+
+The orientation information is stored as direction cosines. The
+direction cosines will be between the local coordinate directions and
+the global coordinate directions. The unit vectors in both the
+local and global coordinates are right-handed and orthonormal. 
+
+Calling the local unit vectors ($x',y',z'$) and the reference unit vectors
+($x,y,z$) the six numbers will be [$x' \cdot x, x' \cdot y, x' \cdot z, y' \cdot
+x, y'  \cdot y, y' \cdot z$] where "$\cdot$" is the scalar dot product (cosine
+of the angle between the unit vectors). 
+
+Notice that this correspods to the first two rows of the rotation
+matrix that transforms from the global orientation to the local
+orientation. The third row can be recovered by using the fact that the
+basis vectors are orthonormal.
 
 \subsection{Image}
 \label{table:image}
@@ -1010,43 +1071,6 @@ type & string & text \\
 \member{type}{Mime content type of note data field e.g. image/jpeg,
  text/plain, text/html.}
 
-\subsection{Orientation}
-\label{table:orientation}
-
-This is the description for a general orientation of a component - it
-is used by the Geometry class.
-
-\begin{table}[h!]\sffamily \footnotesize
-\caption{Orientation class members}
-
-\rowcolors{1}{white}{tableBlue}
-\begin{tabular}{p{4.5cm} p{4.5cm}  p{2.5cm} }
-\toprule
-\bfseries Member     & \bfseries Type & \bfseries Quantity \\
-\midrule
-
-value & 6 floats & unitless \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\member{value}{Dot products between the local and the global unit vectors.}
-
-The orientation information is stored as direction cosines. The
-direction cosines will be between the local coordinate directions and
-the global coordinate directions. The unit vectors in both the
-local and global coordinates are right-handed and orthonormal. 
-
-Calling the local unit vectors ($x',y',z'$) and the reference unit vectors
-($x,y,z$) the six numbers will be [$x' \cdot x, x' \cdot y, x' \cdot z, y' \cdot
-x, y'  \cdot y, y' \cdot z$] where "$\cdot$" is the scalar dot product (cosine
-of the angle between the unit vectors). 
-
-Notice that this correspods to the first two rows of the rotation
-matrix that transforms from the global orientation to the local
-orientation. The third row can be recovered by using the fact that the
-basis vectors are orthonormal.
-
 \subsection{Process}
 \label{table:process}
 
@@ -1162,32 +1186,25 @@ pulse\_width  & float & time  \\
 
 \member{pulse\_width}{Duration of the pulse.}
 
-\subsection{Translation}
-\label{table:translation}
-
-This is the description for the general spatial location of a component - it is used by the Geometry class
-
-\begin{table}[h!]\sffamily \footnotesize
-\caption{Translation class members}
-
-\rowcolors{1}{white}{tableBlue}
-\begin{tabular}{p{4.5cm} p{4.5cm}  p{2.5cm} }
-\toprule
-\bfseries Member     & \bfseries Type & \bfseries Quantity \\
-\midrule
-
-distances & 3 floats & length \\
-\bottomrule
-\end{tabular}
-\end{table}
-
-\member{distances}{The x, y and z components of the translation of the origin of the object
-  relative to the origin of the global coordinate system (the place
-  where the X-ray beam meets the sample).}
-\normalsize
-
 \clearpage
 \section{Changes from previous versions}
+\subsection{Version 1.3}
+\begin{itemize}
+\item{Introduced \hyperref[sec:scans]{Scans}.}
+\item{Added the axes attribute to describe dataset dimensions during
+    scans.}
+\item{Added the fields data\_dark and data\_white to the
+   \hyperref[table:detector]{Detector class}.}
+\item{Made the type of all the fields that start with data in the
+   \hyperref[table:detector]{Detector class} float instead of
+   float/complex.}
+\item{Merged the Translation and Orientation classes in the
+    \hyperref[table:geometry]{Geometry class}.}
+\item{Correct formula for number of photons in
+    \hyperref[table:detector]{Detector class}.}
+\item{Updated the examples to correspond to the changes, in particular
+    the ptychography example now makes use if scans.}
+\end{itemize}
 \subsection{Version 1.2.1}
 \begin{itemize}
 \item{Added a \hyperref[table:monochromator]{Monochromator class}.}
