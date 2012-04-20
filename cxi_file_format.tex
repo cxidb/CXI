@@ -831,7 +831,12 @@ of the angle between the unit vectors).
 
 Notice that this correspods to the first two rows of the rotation
 matrix that transforms from the global orientation to the local
-orientation. The third row can be recovered by using the fact that the
+orientation, namely, the matrix that when applied to $x'$ produces
+the vector $(1,0,0)$ and analogously for $y'$ and $z'$.
+It also corresponds to the first two {\em columns} of
+the matrix that when applied to each of the global unit vector
+($x,y,z$) produces respectively ($x',y',z'$).
+The third row can be recovered by using the fact that the
 basis vectors are orthonormal.
 
 \subsection{Image}
@@ -1174,6 +1179,7 @@ Class describing the light source being used.
 \bfseries Member     & \bfseries Type & \bfseries Quantity \\
 \midrule
 energy     & float & energy  \\
+name     & string & text  \\
 pulse\_energy  & float & energy  \\
 pulse\_width  & float & time  \\
 \bottomrule
@@ -1181,6 +1187,8 @@ pulse\_width  & float & time  \\
 \end{table}
 
 \member{energy}{Energy of each photon.}
+
+\member{name}{The name of the source, for example ALS.}
 
 \member{pulse\_energy}{Sum of the energy of all the photons in the pulse.}
 
@@ -1203,7 +1211,11 @@ pulse\_width  & float & time  \\
 \item{Correct formula for number of photons in
     \hyperref[table:detector]{Detector class}.}
 \item{Updated the examples to correspond to the changes, in particular
-    the ptychography example now makes use if scans.}
+   the ptychography example now makes use if scans.}
+\item{Added a {\tt name} field to the
+   \hyperref[table:source]{Source class}.}
+\item{Clarify the description of \hyperref[table:geometry]{Geometry}
+    {\tt orientation}.}
 \end{itemize}
 \subsection{Version 1.2.1}
 \begin{itemize}
