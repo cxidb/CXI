@@ -79,7 +79,9 @@ class CXITree(QtGui.QTreeWidget):
 class View(QtOpenGL.QGLWidget):
     def __init__(self,parent=None):
         QtOpenGL.QGLWidget.__init__(self,parent)
-
+        self.translation = [0,0]
+        self.zoom = 1.0
+        self.setFocusPolicy(Qt.Qt.ClickFocus)
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClearDepth(1.0)
@@ -113,7 +115,9 @@ class View(QtOpenGL.QGLWidget):
             img_width = self.data.shape[1]
             img_height = self.data.shape[0]
             glTranslatef(self.width()/2.,self.height()/2.,0)
-            glScalef(4.0,4.0,1.0); 
+            glTranslatef(self.translation[0],self.translation[1],0)
+            glScalef(4.0,4.0,1.0);
+            glScalef(self.zoom,self.zoom,1.0); 
             glTranslatef(-img_width/2.,-img_height/2.,0)
             glBindTexture (GL_TEXTURE_2D, self.texture);
             glBegin (GL_QUADS);
@@ -140,11 +144,53 @@ class View(QtOpenGL.QGLWidget):
         imageData[:,:,2] = (data-offset)/scale
         self.texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, self.texture);
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
         self.has_data = True
+        self.updateGL()
+    def wheelEvent(self, event):
+        self.scaleZoom(1+(event.delta()/8.0)/360)
+    def keyPressEvent(self, event):
+        delta = self.width()/20
+        if(event.key() == Qt.Qt.Key_Up):
+            self.translation[1] -= delta
+            self.updateGL()
+        elif(event.key() == Qt.Qt.Key_Down):
+            self.translation[1] += delta
+            self.updateGL()
+        elif(event.key() == Qt.Qt.Key_Left):
+            self.translation[0] += delta
+            self.updateGL()
+        elif(event.key() == Qt.Qt.Key_Right):
+            self.translation[0] -= delta
+            self.updateGL()
+        elif(event.key() == Qt.Qt.Key_Plus):
+            self.scaleZoom(1.05)
+        elif(event.key() == Qt.Qt.Key_Minus):
+            self.scaleZoom(0.95)
+    def mouseReleaseEvent(self, event):
+        self.dragging = False
+
+    def mousePressEvent(self, event):
+        self.dragStart = event.globalPos()
+        self.dragPos = event.globalPos()
+        self.dragging = True
+        
+    def mouseMoveEvent(self, event):
+        if(self.dragging):
+            self.translation[0] += (event.globalPos()-self.dragPos).x()
+            self.translation[1] -= (event.globalPos()-self.dragPos).y()
+            self.dragPos = event.globalPos()
+            self.updateGL()
+    def scaleZoom(self,ratio):
+        self.zoom *= ratio
+        self.translation[0] *= ratio
+        self.translation[1] *= ratio           
+        self.updateGL()
+
+            
         
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
