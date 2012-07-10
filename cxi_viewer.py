@@ -13,14 +13,143 @@ import scipy.ndimage
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-def onclick(event):
-    z = plt.gca().get_images()[0].get_array()
-    x = numpy.arange(0, z.shape[0], 1)
-    y = numpy.arange(0, z.shape[1], 1)
-    v = scipy.ndimage.map_coordinates(z, [[event.ydata], [event.xdata]], order=1)
-    print 'xdata=%f, ydata=%f value=%e'%(
-        event.xdata, event.ydata, v[0])
+def sizeof_fmt(num):
+    for x in ['bytes','kB','MB','GB']:
+        if num < 1024.0:
+            return "%3.1f %s" % (num, x)
+        num /= 1024.0
+    return "%3.1f %s" % (num, 'TB')
 
+class Geometry:
+    def __init__(self):
+        pass
+    def read_detector_geometry(self,det):
+        geom = numpy.eye(3,4)
+        try:
+            o = det["geometry_1/orientation"]
+            for i in range(0,2):
+                for j in range(0,3):
+                    geom[i,j] = o[i*3+j]
+            geom[2,0:3] = numpy.cross(geom[0,0:3],geom[1,0:3])
+            print geom
+        except KeyError:
+            pass
+        try:
+            c = det["corner_position"]
+            for i in range(0,3):
+                geom[i,3] = c[i]
+        except KeyError:
+            pass
+        try:
+            t = det["geometry_1/translation"]
+            for i in range(0,3):
+                geom[i,3] = t[i]
+        except KeyError:
+            pass
+        return geom
+
+    def find_detectors(self,fid):
+        det_id = 1;
+        detectors = []
+        while(True):
+            try:
+                path = "/entry_1/instrument_1/detector_%d" % (det_id);
+                det = fid[path]
+                if(len(det["data"].shape) == 2):
+                    detectors.append(det)
+            except KeyError:
+                break
+            det_id += 1
+        return detectors
+    def find_corners(self):
+        corners = {'x':[0,0],'y':[0,0]};
+        for d,g in zip(self.detectors,self.geometries):
+            h = d["data"].shape[1]*d["y_pixel_size"][()]
+            w = d["data"].shape[0]*d["x_pixel_size"][()]
+#            print h
+#            print w
+            for x in range(-1,2,2):
+                for y in range(-1,2,2):
+                    v = numpy.matrix([[w*x/2.0],[h*y/2.0],[0],[1]])
+                    c = g*v
+                    if(corners['x'][0] > c[0]):
+                        corners['x'][0] = c[0]
+                    if(corners['x'][1] < c[0]):
+                        corners['x'][1] = c[0]
+                    if(corners['y'][0] > c[1]):
+                        corners['y'][0] = c[1]
+                    if(corners['y'][1] < c[1]):
+                        corners['y'][1] = c[1]
+                    print "corner ",c
+        print corners
+    def assemble_detectors(self,fid):
+        print fid
+        self.detectors = self.find_detectors(fid)
+        self.geometries = []
+        for d in self.detectors:
+            geom = self.read_detector_geometry(d)
+            self.geometries.append(geom)
+        self.find_corners()
+
+class DatasetProp(QtGui.QWidget):
+    def __init__(self,parent=None):
+        QtGui.QWidget.__init__(self,parent)
+        self.parent = parent
+        self.vbox = QtGui.QVBoxLayout()
+        self.generalBox = QtGui.QGroupBox("General Properties");
+        self.generalBox.vbox = QtGui.QVBoxLayout()
+        self.generalBox.setLayout(self.generalBox.vbox)        
+        self.dimensionality = QtGui.QLabel("Dimensions:", parent=self)
+        self.datatype = QtGui.QLabel("Data Type:", parent=self)
+        self.datasize = QtGui.QLabel("Data Size:", parent=self)
+        self.dataform = QtGui.QLabel("Data Form:", parent=self)
+        self.generalBox.vbox.addWidget(self.dimensionality)
+        self.generalBox.vbox.addWidget(self.datatype)
+        self.generalBox.vbox.addWidget(self.datasize)
+        self.generalBox.vbox.addWidget(self.dataform)
+
+        self.imageStackBox = QtGui.QGroupBox("Image Stack Properties");
+        self.imageStackBox.vbox = QtGui.QVBoxLayout()
+        self.imageStackBox.setLayout(self.imageStackBox.vbox)
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Slice:"))
+        self.imageStackSlice = QtGui.QSpinBox(parent=self)
+        
+
+        self.imageStackSlice.valueChanged.connect(self.imageStackSliceChanged)                
+        hbox.addWidget(self.imageStackSlice)
+        self.imageStackBox.vbox.addLayout(hbox)
+        self.imageStackBox.hide()
+        
+        self.vbox.addWidget(self.generalBox)
+        self.vbox.addWidget(self.imageStackBox)
+        self.vbox.addStretch()
+        self.setLayout(self.vbox)
+    def setDataset(self,data):
+        self.data = data
+        print "here"
+        string = "Dimensions: "
+        for d in data.shape:
+            string += str(d)+"x"
+        string = string[:-1]
+        self.dimensionality.setText(string)
+        self.datatype.setText("Data Type: %s" % (data.dtype.name))
+        self.datasize.setText("Data Size: %s" % sizeof_fmt(data.dtype.itemsize*reduce(mul,data.shape)))
+        self.dataform.setText("Data Form: %s" % data.form)
+        if(data.form == '2D Image Stack'):
+            self.imageStackSlice.setMinimum(0);
+            self.imageStackSlice.setMaximum(data.shape[0]-1);
+            self.imageStackSlice.setValue(0)
+            self.imageStackBox.show()
+        else:
+            self.imageStackBox.hide()
+            
+    def imageStackSliceChanged(self,slice):
+        self.parent.view.imshow(self.data[slice,:,:])
+        self.parent.statusBar.showMessage("Loaded slice %d" % (slice),1000)
+
+        
+        
 class CXITree(QtGui.QTreeWidget):
     def __init__(self,parent=None):        
         QtGui.QTreeWidget.__init__(self,parent)
@@ -33,16 +162,46 @@ class CXITree(QtGui.QTreeWidget):
     def handleClick(self,item,column):
         if(item.text(column) == "Click to display"):
             data = self.datasets[str(item.text(2))]
-            fig = plt.figure()
-            ax = fig.add_axes([0, 0, 1, 1])            
+#            fig = plt.figure()
+#            ax = fig.add_axes([0, 0, 1, 1])            
             if(numpy.iscomplexobj(data)):
                 data = numpy.abs(data)
             if(len(data.shape) == 1):
-                plt.plot(data)
-            else:
-                ax.imshow(data)
+                data.form = '1D Data'
+                pass
+#                plt.plot(data)
+            elif(len(data.shape) == 2): 
+#                ax.imshow(data)
                 self.parent.view.imshow(data)
-#                cid = fig.canvas.mpl_connect('button_press_event', onclick)
+                data.form = '2D Image'
+            elif(len(data.shape) == 3):
+                msgBox = QtGui.QMessageBox();
+                msgBox.setText("Display data as a 2D series of images or as a 3D volume?");
+                if(data.shape[2] > (data.shape[1] + data.shape[0]) * 3 or
+                   data.shape[2] < (data.shape[1] + data.shape[0]) / 3):
+                    button_2D = msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.AcceptRole);
+                    button_3D = msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.RejectRole);
+                else:
+                    msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.RejectRole);
+                    msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.AcceptRole);
+                res = msgBox.exec_();
+                if(msgBox.clickedButton() == button_2D):
+                    self.parent.view.imshow(data[0,:,:])
+                    self.parent.statusBar.showMessage("Loaded slice 0",1000)
+                    data.form = '2D Image Stack'
+                elif(msgBox.clickedButton() == button_3D):
+                    wrnBox = QtGui.QMessageBox();
+                    wrnBox.setText("CXI Viewer currently does not support the visualization of 3D volumes.")
+                    wrnBox.setInformativeText('Please use an alternative such as LLNL\'s excelent <a href="http://llnl.gov/visit">VisIt</a>.')
+                    wrnBox.setIcon(QtGui.QMessageBox.Warning)
+                    wrnBox.exec_();
+                    return
+                    data.form = '3D Image Volume'                    
+            else:
+                QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets with more than 3 dimensions. The selected dataset has %d dimensions." %(len(data.shape))))
+                return
+            self.parent.datasetProp.setDataset(data);
+
     def treeChanged(self):
         self.manageSizes()
     def manageSizes(self):
@@ -200,13 +359,59 @@ class Viewer(QtGui.QMainWindow):
         self.splitter = QtGui.QSplitter(self)
         self.view = View(self)
         self.tree = CXITree(self)
+        self.datasetProp = DatasetProp(self)
+#        self.datasetProp.hide()                
         self.splitter.addWidget(self.tree)
         self.splitter.addWidget(self.view)
+        self.splitter.addWidget(self.datasetProp)
+        
         self.splitter.setStretchFactor(0,0)
         self.splitter.setStretchFactor(1,1)
         self.setCentralWidget(self.splitter)
         self.statusBar.showMessage("Initialization complete.",1000)
+        self.init_menus()
+        self.geometry = Geometry();        
+    def init_menus(self):
+        self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
+        self.openFile = QtGui.QAction("Open",self)
+        self.fileMenu.addAction(self.openFile)
+        self.openFile.triggered.connect(self.openFileClicked)
+        self.geometryMenu = self.menuBar().addMenu(self.tr("&Geometry"));
+        self.assembleGeometry = QtGui.QAction("Assemble",self)
+        self.geometryMenu.addAction(self.assembleGeometry)
+        self.assembleGeometry.triggered.connect(self.assembleGeometryClicked)
+        self.viewMenu = self.menuBar().addMenu(self.tr("&View"));
 
+        self.viewFileTree = QtGui.QAction("File Tree",self)
+        self.viewFileTree.setCheckable(True);
+        self.viewFileTree.setChecked(True);
+        self.viewMenu.addAction(self.viewFileTree)
+        self.viewFileTree.triggered.connect(self.viewFileTreeClicked)
+
+        self.viewDatasetProperties = QtGui.QAction("Dataset Properties",self)
+        self.viewDatasetProperties.setCheckable(True);
+        self.viewDatasetProperties.setChecked(True);
+        self.viewMenu.addAction(self.viewDatasetProperties)
+        self.viewDatasetProperties.triggered.connect(self.viewDatasetPropertiesClicked)
+
+    def openFileClicked(self):
+        print "here"
+    def assembleGeometryClicked(self):
+        self.geometry.assemble_detectors(self.tree.f)
+    def viewFileTreeClicked(self,checked):
+        if(checked):
+            self.statusBar.showMessage("Showing CXI file tree",1000)
+            self.tree.show()
+        else:
+            self.statusBar.showMessage("Hiding CXI file tree",1000)
+            self.tree.hide()
+    def viewDatasetPropertiesClicked(self,checked):
+        if(checked):
+            self.statusBar.showMessage("Showing dataset properties",1000)
+            self.datasetProp.show()
+        else:
+            self.statusBar.showMessage("Hiding dataset properties",1000)
+            self.datasetProp.hide()
 
 app = QtGui.QApplication(sys.argv)
 aw = Viewer()
