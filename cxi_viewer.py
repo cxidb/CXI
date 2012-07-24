@@ -4,14 +4,23 @@ import sys
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
-import matplotlib.pyplot as plt
 from operator import mul
 import numpy
-import signal
-import scipy.interpolate
-import scipy.ndimage
 
-signal.signal(signal.SIGINT, signal.SIG_DFL)
+"""
+Wishes:
+
+Infinite subplots
+Color tagged images
+Double click to zoom on image (double click again zoom back to width of column). Also changes to 1 column view
+View only tagged ones
+Tagging with numbers
+Different tags different colors
+Multiple tags per image
+
+
+"""
+
 
 def sizeof_fmt(num):
     for x in ['bytes','kB','MB','GB']:
@@ -66,8 +75,6 @@ class Geometry:
         for d,g in zip(self.detectors,self.geometries):
             h = d["data"].shape[1]*d["y_pixel_size"][()]
             w = d["data"].shape[0]*d["x_pixel_size"][()]
-#            print h
-#            print w
             for x in range(-1,2,2):
                 for y in range(-1,2,2):
                     v = numpy.matrix([[w*x/2.0],[h*y/2.0],[0],[1]])
@@ -112,22 +119,91 @@ class DatasetProp(QtGui.QWidget):
         self.imageStackBox.vbox = QtGui.QVBoxLayout()
         self.imageStackBox.setLayout(self.imageStackBox.vbox)
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Slice:"))
+        hbox.addWidget(QtGui.QLabel("Image:"))
         self.imageStackSlice = QtGui.QSpinBox(parent=self)
-        
-
         self.imageStackSlice.valueChanged.connect(self.imageStackSliceChanged)                
         hbox.addWidget(self.imageStackSlice)
         self.imageStackBox.vbox.addLayout(hbox)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Step Size:"))
+        self.imageStackSliceStep = QtGui.QSpinBox(parent=self)
+        self.imageStackSliceStep.setMinimum(1)
+        self.imageStackSliceStep.valueChanged.connect(self.imageStackSlice.setSingleStep)
+        hbox.addWidget(self.imageStackSliceStep)
+        self.imageStackBox.vbox.addLayout(hbox)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Subplots:"))
+        self.imageStackSubplots = QtGui.QSpinBox(parent=self)
+        self.imageStackSubplots.setMinimum(1)
+#        self.imageStackSubplots.setMaximum(5)
+        self.imageStackSubplots.valueChanged.connect(self.imageStackSubplotsChanged)                
+        hbox.addWidget(self.imageStackSubplots)
+        self.imageStackBox.vbox.addLayout(hbox)
+
+        self.imageStackGlobalScale = QtGui.QCheckBox(parent=self)
+        self.imageStackGlobalScale.setText("Global Scale")
+        self.imageStackGlobalScale.stateChanged.connect(self.imageStackGlobalScaleChanged)
+        self.imageStackBox.vbox.addWidget(self.imageStackGlobalScale)
+        self.imageStackGlobalScale.minimum = None
+        self.imageStackGlobalScale.maximum = None
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Selected Image:"))
+        self.imageStackSubplotsSelected = QtGui.QLabel("None",parent=self)
+        hbox.addWidget(self.imageStackSubplotsSelected)
+        self.imageStackBox.vbox.addLayout(hbox)
+        
         self.imageStackBox.hide()
+
+        self.displayBox = QtGui.QGroupBox("Display Properties");
+        self.displayBox.vbox = QtGui.QVBoxLayout()
+        self.displayBox.setLayout(self.displayBox.vbox)
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Gamma:"))
+        self.displayGamma = QtGui.QDoubleSpinBox(parent=self)
+        self.displayGamma.setValue(0.25);
+        self.displayGamma.setSingleStep(0.25);
+        self.displayGamma.valueChanged.connect(self.parent.view.updateTextures)
+        hbox.addWidget(self.displayGamma)
+        self.displayBox.vbox.addLayout(hbox)
+
+        self.imageBox = QtGui.QGroupBox("Image Properties");
+        self.imageBox.vbox = QtGui.QVBoxLayout()
+        self.imageBox.setLayout(self.imageBox.vbox)
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Min:"))
+        self.imageMin = QtGui.QLabel("None",parent=self)
+        hbox.addWidget(self.imageMin)
+        self.imageBox.vbox.addLayout(hbox)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Max:"))
+        self.imageMax = QtGui.QLabel("None",parent=self)
+        hbox.addWidget(self.imageMax)
+        self.imageBox.vbox.addLayout(hbox)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Sum:"))
+        self.imageSum = QtGui.QLabel("None",parent=self)
+        hbox.addWidget(self.imageSum)
+        self.imageBox.vbox.addLayout(hbox)
+
+        self.imageBox.hide()
         
         self.vbox.addWidget(self.generalBox)
         self.vbox.addWidget(self.imageStackBox)
+        self.vbox.addWidget(self.imageBox)
+        self.vbox.addWidget(self.displayBox)
         self.vbox.addStretch()
         self.setLayout(self.vbox)
+        self.plots = 1
     def setDataset(self,data):
+        self.imageStackGlobalScale.minimum = None
+        self.imageStackGlobalScale.maximum = None
+
         self.data = data
-        print "here"
         string = "Dimensions: "
         for d in data.shape:
             string += str(d)+"x"
@@ -144,9 +220,47 @@ class DatasetProp(QtGui.QWidget):
         else:
             self.imageStackBox.hide()
             
+    def clearDataset(self):
+        string = "Dimensions: "
+        self.dimensionality.setText(string)
+        self.datatype.setText("Data Type: ")
+        self.datasize.setText("Data Size: ")
+        self.dataform.setText("Data Form: ")
+        self.imageStackBox.hide()
+
     def imageStackSliceChanged(self,slice):
-        self.parent.view.imshow(self.data[slice,:,:])
-        self.parent.statusBar.showMessage("Loaded slice %d" % (slice),1000)
+        self.recalculateSelectedSlice()
+        self.parent.view.clear()
+        for x in range(0,self.plots):
+            for y in range(0,self.plots):
+                if(slice+x+y*self.plots < self.data.shape[0]):
+                    self.parent.view.imshow(self.data[slice+x+y*self.plots,:,:],subplot_x=x,subplot_y=y,update=False)
+                    self.parent.statusBar.showMessage("Loaded slice %d" % (slice+x+y*self.plots),1000)
+                else:
+                    #clear subplot
+                    pass
+        self.parent.view.updateGL()
+        self.parent.view.checkSelectedSubplot()
+
+    def imageStackSubplotsChanged(self,plots):
+        self.plots = plots
+        self.imageStackSliceStep.setValue(plots*plots)
+        self.imageStackSliceChanged(self.imageStackSlice.value())
+#        self.parent.view.clear()
+
+    def imageStackGlobalScaleChanged(self,state):
+        if(self.imageStackGlobalScale.minimum == None):
+            self.imageStackGlobalScale.minimum = numpy.min(self.data)
+        if(self.imageStackGlobalScale.maximum == None):
+            self.imageStackGlobalScale.maximum = numpy.max(self.data)
+        self.imageStackSliceChanged(self.imageStackSlice.value())
+    def recalculateSelectedSlice(self):
+        plot = self.parent.view.selectedSubplot
+        if(plot != None):
+            s = self.plots*plot[1]+plot[0]+self.imageStackSlice.value()
+            self.imageStackSubplotsSelected.setText(str(s))
+        else:
+            self.imageStackSubplotsSelected.setText(str(plot))
 
         
         
@@ -154,7 +268,6 @@ class CXITree(QtGui.QTreeWidget):
     def __init__(self,parent=None):        
         QtGui.QTreeWidget.__init__(self,parent)
         self.parent = parent
-        self.buildTree()
         self.itemClicked.connect(self.handleClick)
         self.itemExpanded.connect(self.treeChanged)
         self.itemCollapsed.connect(self.treeChanged)
@@ -162,16 +275,12 @@ class CXITree(QtGui.QTreeWidget):
     def handleClick(self,item,column):
         if(item.text(column) == "Click to display"):
             data = self.datasets[str(item.text(2))]
-#            fig = plt.figure()
-#            ax = fig.add_axes([0, 0, 1, 1])            
-            if(numpy.iscomplexobj(data)):
+            if(numpy.iscomplexobj(data[0])):
                 data = numpy.abs(data)
             if(len(data.shape) == 1):
                 data.form = '1D Data'
                 pass
-#                plt.plot(data)
             elif(len(data.shape) == 2): 
-#                ax.imshow(data)
                 self.parent.view.imshow(data)
                 data.form = '2D Image'
             elif(len(data.shape) == 3):
@@ -182,11 +291,12 @@ class CXITree(QtGui.QTreeWidget):
                     button_2D = msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.AcceptRole);
                     button_3D = msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.RejectRole);
                 else:
-                    msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.RejectRole);
-                    msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.AcceptRole);
+                    button_2D = msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.RejectRole);
+                    button_3D = msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.AcceptRole);
                 res = msgBox.exec_();
                 if(msgBox.clickedButton() == button_2D):
-                    self.parent.view.imshow(data[0,:,:])
+                    self.parent.view.loadStack(data)
+#                    self.parent.view.imshow(data[0,:,:])
                     self.parent.statusBar.showMessage("Loaded slice 0",1000)
                     data.form = '2D Image Stack'
                 elif(msgBox.clickedButton() == button_3D):
@@ -211,13 +321,17 @@ class CXITree(QtGui.QTreeWidget):
         sizes = self.parent.splitter.sizes()
         sizes[0] = width
         self.parent.splitter.setSizes(sizes)        
-    def buildTree(self):
+    def buildTree(self,filename):
+        self.clear();
         self.datasets = {}
         self.setColumnCount(2)
-        self.f = h5py.File(sys.argv[1], "r")
+        self.f = h5py.File(filename, "r")
         item = QtGui.QTreeWidgetItem(QtCore.QStringList("/"))
         self.addTopLevelItem(item)
         self.buildBranch(self.f,item)
+        self.parent.view.clear()
+        self.parent.datasetProp.clearDataset()
+        self.loadData1()
     def buildBranch(self,group,item):        
             for g in group.keys():
                 lst = QtCore.QStringList(g)
@@ -233,7 +347,26 @@ class CXITree(QtGui.QTreeWidget):
                         lst.append(group[g].name)
                         self.datasets[group[g].name] = group[g]
                     item.addChild(QtGui.QTreeWidgetItem(lst))
-
+    def loadData1(self):
+        root = self.topLevelItem(0)
+        root.setExpanded(True)
+        path = ("entry_1","data_1","data")
+        for section in path:
+            found = False
+            for i in range(0,root.childCount()):
+                child = root.child(i)
+                if(child.text(0) == section):
+                    child.setExpanded(True)
+                    root = child
+                    found = True
+                    break
+            if(not found):
+                break
+        if(found):
+            self.handleClick(root,1)
+            return 1
+        return 0
+        
 
 class View(QtOpenGL.QGLWidget):
     def __init__(self,parent=None):
@@ -241,13 +374,25 @@ class View(QtOpenGL.QGLWidget):
         self.translation = [0,0]
         self.zoom = 1.0
         self.setFocusPolicy(Qt.Qt.ClickFocus)
+        self.data = {}
+        self.texture = {}
+        self.parent = parent
+        self.setMouseTracking(True)
+        self.dragging = False
+        self.subplotBorder = 3
+        self.selectedSubplot = None
+        self.lastHoveredSubplot = None
+        self.mode = None
+        self.stackWidth = 1;
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClearDepth(1.0)
+        glHint(GL_LINE_SMOOTH_HINT, GL_NICEST);
+        glEnable(GL_BLEND);
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if(self.width() and self.height()):
-            gluOrtho2D(0.0, self.width(), 0.0, self.width());
+            gluOrtho2D(0.0, self.width(), 0.0, self.height());
         self.has_data = False
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();  
@@ -261,54 +406,143 @@ class View(QtOpenGL.QGLWidget):
         glLoadIdentity()
         if(w and h):
             gluOrtho2D(0.0, w, 0.0, h);
+                            
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();  
     def paintGL(self):
         '''
         Drawing routine
         '''
+
+        self.visibleImages()
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
-        glEnable(GL_TEXTURE_2D)
+        glTranslatef(self.width()/2.,self.height()/2.,0)
+        glTranslatef(self.translation[0],self.translation[1],0)
+        glScalef(4.0,4.0,1.0);
+        glScalef(self.zoom,self.zoom,1.0);
         if(self.has_data):
-            img_width = self.data.shape[1]
-            img_height = self.data.shape[0]
-            glTranslatef(self.width()/2.,self.height()/2.,0)
-            glTranslatef(self.translation[0],self.translation[1],0)
-            glScalef(4.0,4.0,1.0);
-            glScalef(self.zoom,self.zoom,1.0); 
-            glTranslatef(-img_width/2.,-img_height/2.,0)
-            glBindTexture (GL_TEXTURE_2D, self.texture);
-            glBegin (GL_QUADS);
-            glTexCoord2f (0.0, 0.0);
-            glVertex3f (0, img_height, 0.0);
-            glTexCoord2f (1.0, 0.0);
-            glVertex3f (img_width, img_height, 0.0);
-            glTexCoord2f (1.0, 1.0);
-            glVertex3f (img_width, 0, 0.0);
-            glTexCoord2f (0.0, 1.0);
-            glVertex3f (0, 0, 0.0);
-            glEnd ();
-        glDisable(GL_TEXTURE_2D)
+            if(self.mode == "Stack"):
+                pass
+            else:
+                for i,entry in enumerate(self.data):
+                    data = self.data[entry]
+                    img_width = data.shape[1]
+                    img_height = data.shape[0]
+                    glPushMatrix()
+                    glTranslatef(-img_width/2.,-img_height/2.,0)
+                    glTranslatef((img_width+self.subplotBorder)*entry[0],(img_height+self.subplotBorder)*entry[1],0)
+                    glEnable(GL_TEXTURE_2D)
+                    glBindTexture (GL_TEXTURE_2D, self.texture[entry]);
+                    glColor3f(1.0,1.0,1.0);
+                    glBegin (GL_QUADS);
+                    glTexCoord2f (0.0, 0.0);
+                    glVertex3f (0, img_height, 0.0);
+                    glTexCoord2f (1.0, 0.0);
+                    glVertex3f (img_width, img_height, 0.0);
+                    glTexCoord2f (1.0, 1.0);
+                    glVertex3f (img_width, 0, 0.0);
+                    glTexCoord2f (0.0, 1.0);
+                    glVertex3f (0, 0, 0.0);
+                    glEnd ();
+                    glDisable(GL_TEXTURE_2D)
+                    if(entry == self.lastHoveredSubplot):
+                        glColor3f(1.0,1.0,1.0);
+                        glLineWidth(self.subplotBorder); 
+                        glBegin(GL_LINES);
+                        glVertex3f (0, img_height, 0.0);
+                        glVertex3f (img_width, img_height, 0.0);
+                        glVertex3f (img_width, img_height, 0.0);
+                        glVertex3f (img_width, 0, 0.0);
+                        glVertex3f (img_width, 0, 0.0);
+                        glVertex3f (0, 0, 0.0);
+                        glVertex3f (0, 0, 0.0);
+                        glVertex3f (0, img_height, 0.0);
+                        glEnd ();
+                    elif(entry == self.selectedSubplot):
+                        glColor3f(0.6,0.6,0.6);
+                        glLineWidth(self.subplotBorder); 
+                        glBegin(GL_LINES);
+                        glVertex3f (0, img_height, 0.0);
+                        glVertex3f (img_width, img_height, 0.0);
+                        glVertex3f (img_width, img_height, 0.0);
+                        glVertex3f (img_width, 0, 0.0);
+                        glVertex3f (img_width, 0, 0.0);
+                        glVertex3f (0, 0, 0.0);
+                        glVertex3f (0, 0, 0.0);
+                        glVertex3f (0, img_height, 0.0);
+                    glEnd ();
+
+                    glPopMatrix()
         glFlush()
-    def imshow(self,data):
-        self.data = data
+    def imshow(self,data,subplot_x=0,subplot_y=0,update=True):
+        self.data[(subplot_x,subplot_y)] = data
         offset = numpy.min(data);
-        scale = (numpy.max(data)-offset)/256.0
+        scale = float(numpy.max(data)-offset)
         if(scale == 0):
             scale = 1
         imageData = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
-        imageData[:,:,0] = (data-offset)/scale
-        imageData[:,:,1] = (data-offset)/scale
-        imageData[:,:,2] = (data-offset)/scale
-        self.texture = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.texture);
+        gamma = self.parent.datasetProp.displayGamma.value();
+        if(self.parent.datasetProp.imageStackBox.isVisible() and
+           self.parent.datasetProp.imageStackGlobalScale.isChecked()):
+            offset = self.parent.datasetProp.imageStackGlobalScale.minimum
+            scale = float(self.parent.datasetProp.imageStackGlobalScale.maximum-offset)
+        imageData[:,:,0] = 255*((data-offset)/scale)**(gamma)
+        imageData[:,:,1] = 255*((data-offset)/scale)**(gamma)
+        imageData[:,:,2] = 255*((data-offset)/scale)**(gamma)
+        self.texture[(subplot_x,subplot_y)] = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, self.texture[(subplot_x,subplot_y)])
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
         self.has_data = True
-        self.updateGL()
+        if(update):
+            self.updateGL()
+    def loadStack(self,data):
+        self.mode = "Stack"
+        self.data = data
+        self.has_data = True
+    def visibleImages(self):
+        pos = (0,0)
+        modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
+        projection = glGetDoublev(GL_PROJECTION_MATRIX)
+        viewport = glGetIntegerv(GL_VIEWPORT);
+        (x,y,z) =  gluUnProject(pos[0], viewport[3]-pos[1],0 , model=modelview, proj=projection, view=viewport)
+        x/(self.data.shape[2]+self.subplotBorder)
+        x/(self.data.shape[2]+self.subplotBorder)
+        print (x,y,z)
+        pos = (self.width(),self.height())
+        modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
+        projection = glGetDoublev(GL_PROJECTION_MATRIX)
+        viewport = glGetIntegerv(GL_VIEWPORT);
+        (x,y,z) =  gluUnProject(pos[0], viewport[3]-pos[1],0 , model=modelview, proj=projection, view=viewport)
+        print (x,y,z)
+        self.stackWidth
+
+    def updateTextures(self):
+        for i,entry in enumerate(self.data):
+            data = self.data[entry]
+            offset = numpy.min(data);
+            scale = float(numpy.max(data)-offset)
+            if(scale == 0):
+                scale = 1
+            imageData = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
+            gamma = self.parent.datasetProp.displayGamma.value();
+            if(self.parent.datasetProp.imageStackBox.isVisible() and
+               self.parent.datasetProp.imageStackGlobalScale.isChecked()):
+                offset = self.parent.datasetProp.imageStackGlobalScale.minimum
+                scale = float(self.parent.datasetProp.imageStackGlobalScale.maximum-offset)
+            imageData[:,:,0] = 255*((data-offset)/scale)**(gamma)
+            imageData[:,:,1] = 255*((data-offset)/scale)**(gamma)
+            imageData[:,:,2] = 255*((data-offset)/scale)**(gamma)
+            self.texture[entry] = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, self.texture[entry])
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
+        self.updateGL();
     def wheelEvent(self, event):
         self.scaleZoom(1+(event.delta()/8.0)/360)
     def keyPressEvent(self, event):
@@ -329,27 +563,67 @@ class View(QtOpenGL.QGLWidget):
             self.scaleZoom(1.05)
         elif(event.key() == Qt.Qt.Key_Minus):
             self.scaleZoom(0.95)
+        elif(event.key() == Qt.Qt.Key_F):
+            self.parent.statusBar.showMessage("Flaged "+str(self.hoveredSubplot()),1000)
     def mouseReleaseEvent(self, event):
         self.dragging = False
-
+        if(event.pos() == self.dragStart and event.button() == QtCore.Qt.LeftButton):
+            self.selectedSubplot = self.lastHoveredSubplot
+            self.parent.datasetProp.recalculateSelectedSlice()
+            if(self.selectedSubplot is not None):
+                self.parent.datasetProp.imageMin.setText(str(numpy.min(self.data[self.selectedSubplot])))
+                self.parent.datasetProp.imageMax.setText(str(numpy.max(self.data[self.selectedSubplot])))
+                self.parent.datasetProp.imageSum.setText(str(numpy.sum(self.data[self.selectedSubplot])))
+                self.parent.datasetProp.imageBox.show()
+            else:
+                self.parent.datasetProp.imageBox.hide()
+            self.updateGL()
     def mousePressEvent(self, event):
-        self.dragStart = event.globalPos()
-        self.dragPos = event.globalPos()
+        self.dragStart = event.pos()
+        self.dragPos = event.pos()
         self.dragging = True
-        
+        self.updateGL()
     def mouseMoveEvent(self, event):
         if(self.dragging):
-            self.translation[0] += (event.globalPos()-self.dragPos).x()
-            self.translation[1] -= (event.globalPos()-self.dragPos).y()
-            self.dragPos = event.globalPos()
+            self.translation[1] -= (event.pos()-self.dragPos).y()
+            self.translation[0] += (event.pos()-self.dragPos).x()                        
+            self.dragPos = event.pos()
             self.updateGL()
+        ss = self.hoveredSubplot()
+        if(ss != self.lastHoveredSubplot):
+            self.lastHoveredSubplot = ss
+            self.updateGL()
+    def checkSelectedSubplot(self):
+        if(self.selectedSubplot not in self.data.keys()):
+            self.selectedSubplot = None
+            self.parent.datasetProp.recalculateSelectedSlice()
+    def hoveredSubplot(self):
+        pos = self.mapFromGlobal(QtGui.QCursor.pos())
+        modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
+        projection = glGetDoublev(GL_PROJECTION_MATRIX)
+        viewport = glGetIntegerv(GL_VIEWPORT);
+        (x,y,z) =  gluUnProject(pos.x(), viewport[3]-pos.y(),0 , model=modelview, proj=projection, view=viewport)
+        plot = self.posToSubplot(x,y,z)
+        if(plot in self.data.keys()):
+            return plot    
+        else:
+            return None
+
+    def posToSubplot(self,x,y,z):
+        if(len(self.data.keys()) > 0):
+            shape = self.data.values()[0].shape
+            return (int(numpy.round(x/(shape[1]+self.subplotBorder))),int(numpy.round(y/(shape[0]+self.subplotBorder))))
     def scaleZoom(self,ratio):
         self.zoom *= ratio
         self.translation[0] *= ratio
         self.translation[1] *= ratio           
         self.updateGL()
-
-            
+    def clear(self):
+        self.has_data = False
+        self.data = {}
+        glDeleteTextures(self.texture.values())
+        self.texture = {}
+        self.updateGL()
         
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
@@ -370,7 +644,17 @@ class Viewer(QtGui.QMainWindow):
         self.setCentralWidget(self.splitter)
         self.statusBar.showMessage("Initialization complete.",1000)
         self.init_menus()
-        self.geometry = Geometry();        
+        self.geometry = Geometry();
+        self.resize(800,450)
+        settings = QtCore.QSettings()
+        self.restoreGeometry(settings.value("geometry").toByteArray());
+        self.restoreState(settings.value("windowState").toByteArray());
+        QtCore.QTimer.singleShot(0,self.after_show)
+
+    def after_show(self):
+        if(len(sys.argv) > 1):
+            self.tree.buildTree(sys.argv[1])
+        
     def init_menus(self):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
         self.openFile = QtGui.QAction("Open",self)
@@ -395,7 +679,9 @@ class Viewer(QtGui.QMainWindow):
         self.viewDatasetProperties.triggered.connect(self.viewDatasetPropertiesClicked)
 
     def openFileClicked(self):
-        print "here"
+        fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", QtCore.QString(), "CXI Files (*.cxi)");
+        if(not fileName.isEmpty()):
+            self.tree.buildTree(str(fileName))
     def assembleGeometryClicked(self):
         self.geometry.assemble_detectors(self.tree.f)
     def viewFileTreeClicked(self,checked):
@@ -412,7 +698,17 @@ class Viewer(QtGui.QMainWindow):
         else:
             self.statusBar.showMessage("Hiding dataset properties",1000)
             self.datasetProp.hide()
+    def closeEvent(self,event):
+        settings = QtCore.QSettings()
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+        QtGui.QMainWindow.closeEvent(self,event)
+                          
 
+
+QtCore.QCoreApplication.setOrganizationName("CXIDB");
+QtCore.QCoreApplication.setOrganizationDomain("cxidb.org");
+QtCore.QCoreApplication.setApplicationName("CXI Viewer");
 app = QtGui.QApplication(sys.argv)
 aw = Viewer()
 aw.show()
