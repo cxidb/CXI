@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 import h5py
 import sys
 from OpenGL.GL import *
@@ -511,8 +511,13 @@ class View(QtOpenGL.QGLWidget):
                     visible.append(y*self.stackWidth+x)
         return visible
     def updateTextures(self,images):
+        self.parent.statusBar.showMessage("Loading images...")
+        QtCore.QCoreApplication.processEvents()
+        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
+
         for img in images:
             if(img not in self.textureIds):
+
                 self.textureIds[img] = glGenTextures(1)
                 data = self.data[img,:]
                 offset = float(numpy.min(data));
@@ -534,6 +539,8 @@ class View(QtOpenGL.QGLWidget):
                 glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
         textureImages = self.textureIds.keys()
+        QtGui.QApplication.restoreOverrideCursor()
+        self.parent.statusBar.clearMessage()
 #        for img in textureImages:
 #            if img not in images:
 #                glDeleteTextures(self.textureIds[img])
