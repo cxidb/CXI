@@ -255,13 +255,14 @@ class CXITree(QtGui.QTreeWidget):
             elif(len(data.shape) == 3):
                 msgBox = QtGui.QMessageBox();
                 msgBox.setText("Display data as a 2D series of images or as a 3D volume?");
-                if(data.shape[2] > (data.shape[1] + data.shape[0]) * 3 or
-                   data.shape[2] < (data.shape[1] + data.shape[0]) / 3):
-                    button_2D = msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.AcceptRole);
-                    button_3D = msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.RejectRole);
+                print data.shape
+                if('axes' in self.datasets[str(item.text(2))].attrs.keys() is not None or data.shape[0] > (data.shape[1] + data.shape[2]) * 3 or
+                   data.shape[0] < (data.shape[1] + data.shape[2]) / 3):
+                    button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.AcceptRole);
+                    button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.RejectRole);
                 else:
-                    button_2D = msgBox.addButton(self.tr("2D series"), QtGui.QMessageBox.RejectRole);
-                    button_3D = msgBox.addButton(self.tr("3D volume"), QtGui.QMessageBox.AcceptRole);
+                    button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.RejectRole);
+                    button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.AcceptRole);
                 res = msgBox.exec_();
                 if(msgBox.clickedButton() == button_2D):
                     self.parent.view.loadStack(data)
@@ -511,12 +512,12 @@ class View(QtOpenGL.QGLWidget):
                     visible.append(y*self.stackWidth+x)
         return visible
     def updateTextures(self,images):
-        self.parent.statusBar.showMessage("Loading images...")
-        QtCore.QCoreApplication.processEvents()
-        QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
 
         for img in images:
             if(img not in self.textureIds):
+                self.parent.statusBar.showMessage("Loading images...")
+                QtCore.QCoreApplication.processEvents()
+                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
 
                 self.textureIds[img] = glGenTextures(1)
                 data = self.data[img,:]
