@@ -125,7 +125,8 @@ class DatasetProp(QtGui.QWidget):
         self.imageStackSubplots = QtGui.QSpinBox(parent=self)
         self.imageStackSubplots.setMinimum(1)
 #        self.imageStackSubplots.setMaximum(5)
-        self.imageStackSubplots.valueChanged.connect(self.imageStackSubplotsChanged)                
+        self.imageStackSubplots.valueChanged.connect(self.imageStackSubplotsChanged)    
+        self.imageStackSubplots.setValue(4)            
         hbox.addWidget(self.imageStackSubplots)
         self.imageStackBox.vbox.addLayout(hbox)
 
@@ -255,7 +256,6 @@ class CXITree(QtGui.QTreeWidget):
             elif(len(data.shape) == 3):
                 msgBox = QtGui.QMessageBox();
                 msgBox.setText("Display data as a 2D series of images or as a 3D volume?");
-                print data.shape
                 if('axes' in self.datasets[str(item.text(2))].attrs.keys() is not None or data.shape[0] > (data.shape[1] + data.shape[2]) * 3 or
                    data.shape[0] < (data.shape[1] + data.shape[2]) / 3):
                     button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.AcceptRole);
@@ -265,6 +265,7 @@ class CXITree(QtGui.QTreeWidget):
                     button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.AcceptRole);
                 res = msgBox.exec_();
                 if(msgBox.clickedButton() == button_2D):
+                    self.parent.view.clear()
                     self.parent.view.loadStack(data)
 #                    self.parent.view.imshow(data[0,:,:])
                     self.parent.statusBar.showMessage("Loaded slice 0",1000)
@@ -345,7 +346,7 @@ class View(QtOpenGL.QGLWidget):
     def __init__(self,parent=None):
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
-        self.zoom = 1.0
+        self.zoom = 4.0
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.data = {}
         self.textureIds = {}
@@ -354,11 +355,12 @@ class View(QtOpenGL.QGLWidget):
         self.parent = parent
         self.setMouseTracking(True)
         self.dragging = False
-        self.subplotBorder = 3
+        self.subplotBorder = 10
         self.selectedImage = None
         self.lastHoveredImage = None
         self.mode = None
         self.stackWidth = 1;
+        self.has_data = False
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClearDepth(1.0)
@@ -371,15 +373,16 @@ class View(QtOpenGL.QGLWidget):
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if(self.width() and self.height()):
-            gluOrtho2D(0.0, self.width(), 0.0, self.height());
-        self.has_data = False
+            gluOrtho2D(0.0, self.width(), 0.0, self.height());        
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity();  
     def resizeGL(self, w, h):
         '''
         Resize the GL window 
         '''
-        
+        if(self.has_data):
+            self.setStackWidth(self.stackWidth) 
+
         glViewport(0, 0, w, h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -387,7 +390,63 @@ class View(QtOpenGL.QGLWidget):
             gluOrtho2D(0.0, w, 0.0, h);
                             
         glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();  
+        glLoadIdentity(); 
+
+    def paintSelectedImageBorder(self,img_width,img_height):
+        glPushMatrix()
+        glShadeModel(GL_FLAT)
+        glColor3f(1.0,1.0,1.0);
+        glLineWidth(0.5/self.zoom)
+        glBegin(GL_LINE_LOOP)
+        glVertex3f (0, img_height, 0.0);
+        v = 10.0/self.zoom
+        vi = 0
+        while(v < img_width):
+            glVertex3f (v, img_height, 0.0);                            
+            if(vi % 2):
+                glColor3f(0.0,0.0,0.0);
+            else:
+                glColor3f(1.0,1.0,1.0);
+            vi += 1
+            v += 10.0/self.zoom 
+        glColor3f(1.0,1.0,1.0);
+        glVertex3f (img_width, img_height, 0.0);
+        v = 10.0/self.zoom
+        vi = 0
+        while(v < img_height):
+            glVertex3f (img_width, img_height-v, 0.0);                            
+            if(vi % 2):
+                glColor3f(0.0,0.0,0.0);
+            else:
+                glColor3f(1.0,1.0,1.0);
+            vi += 1
+            v += 10.0/self.zoom 
+        glColor3f(1.0,1.0,1.0);
+        glVertex3f (img_width, 0, 0.0);
+        v = 10.0/self.zoom
+        vi = 0
+        while(v < img_width):
+            glVertex3f (img_width-v, 0, 0.0);                            
+            if(vi % 2):
+                glColor3f(0.0,0.0,0.0);
+            else:
+                glColor3f(1.0,1.0,1.0);
+            vi += 1
+            v += 10.0/self.zoom 
+        glColor3f(1.0,1.0,1.0);
+        glVertex3f (0, 0, 0.0);
+        v = 10.0/self.zoom
+        vi = 0
+        while(v < img_height):
+            glVertex3f (0, v, 0.0);                            
+            if(vi % 2):
+                glColor3f(0.0,0.0,0.0);
+            else:
+                glColor3f(1.0,1.0,1.0);
+            vi += 1
+            v += 10.0/self.zoom 
+        glEnd ();
+        glPopMatrix()
     def paintGL(self):
         '''
         Drawing routine
@@ -396,20 +455,19 @@ class View(QtOpenGL.QGLWidget):
         glLoadIdentity()
         glTranslatef(self.width()/2.,self.height()/2.,0)
         glTranslatef(self.translation[0],self.translation[1],0)
-        glScalef(4.0,4.0,1.0);
         glScalef(self.zoom,self.zoom,1.0);    
         if(self.has_data):
             if(self.mode == "Stack"):
                 img_width = self.data.shape[2]
                 img_height = self.data.shape[1]
-                glTranslatef(-((img_width+self.subplotBorder)*self.stackWidth)/2.,-((img_height+self.subplotBorder)/2.),0)
+                glTranslatef(-((img_width+self.subplotSceneBorder())*self.stackWidth)/2.,-((img_height+self.subplotSceneBorder())/2.),0)
                 visible = self.visibleImages()
                 self.updateTextures(visible)
                 for i,img in enumerate(self.textureIds):
                     glPushMatrix()
                     pos_x = img%self.stackWidth
                     pos_y = math.floor(img/self.stackWidth)
-                    glTranslatef(self.subplotBorder/2.+(img_width+self.subplotBorder)*pos_x,self.subplotBorder/2.+(img_height+self.subplotBorder)*pos_y,0)
+                    glTranslatef(self.subplotSceneBorder()/2.+(img_width+self.subplotSceneBorder())*pos_x,self.subplotSceneBorder()/2.+(img_height+self.subplotSceneBorder())*pos_y,0)
                     glEnable(GL_TEXTURE_2D)
                     glBindTexture (GL_TEXTURE_2D, self.textureIds[img]);
                     glColor3f(1.0,1.0,1.0);
@@ -424,10 +482,10 @@ class View(QtOpenGL.QGLWidget):
                     glVertex3f (0, 0, 0.0);
                     glEnd ();
                     glDisable(GL_TEXTURE_2D)
-                    if(img == self.lastHoveredImage):
+                    if(0 and img == self.lastHoveredImage):
                         glPushMatrix()
                         glColor3f(1.0,1.0,1.0);
-                        glLineWidth(1)
+                        glLineWidth(0.5/self.zoom)
                         glBegin(GL_LINE_LOOP)
                         glVertex3f (0, img_height, 0.0);
                         glVertex3f (img_width, img_height, 0.0);
@@ -436,16 +494,7 @@ class View(QtOpenGL.QGLWidget):
                         glEnd ();
                         glPopMatrix()
                     elif(img == self.selectedImage):
-                        glPushMatrix()
-                        glColor3f(0.6,0.6,0.6);
-                        glLineWidth(1)
-                        glBegin(GL_LINE_LOOP)
-                        glVertex3f (0, img_height, 0.0);
-                        glVertex3f (img_width, img_height, 0.0);
-                        glVertex3f (img_width, 0, 0.0);
-                        glVertex3f (0, 0, 0.0);
-                        glEnd ();
-                        glPopMatrix()
+                        self.paintSelectedImageBorder(img_width,img_height)
                     glPopMatrix()                                            
         glFlush()
     def imshow(self,data,subplot_x=0,subplot_y=0,update=True):
@@ -478,6 +527,7 @@ class View(QtOpenGL.QGLWidget):
         self.mode = "Stack"
         self.data = data
         self.has_data = True
+        self.setStackWidth(self.stackWidth)
     def loadImage(self,data):
         print "Loading..."
         if(len(data.shape) == 2):        
@@ -497,13 +547,13 @@ class View(QtOpenGL.QGLWidget):
         projection = glGetDoublev(GL_PROJECTION_MATRIX)
         viewport = glGetIntegerv(GL_VIEWPORT);
         (x,y,z) =  gluUnProject(pos[0], viewport[3]-pos[1],0 , model=modelview, proj=projection, view=viewport)
-        top_left  = (x/(self.data.shape[2]+self.subplotBorder), y/(self.data.shape[1]+self.subplotBorder))
+        top_left  = (x/(self.data.shape[2]+self.subplotSceneBorder()), y/(self.data.shape[1]+self.subplotSceneBorder()))
         pos = (self.width(),self.height())
         modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
         projection = glGetDoublev(GL_PROJECTION_MATRIX)
         viewport = glGetIntegerv(GL_VIEWPORT);
         (x,y,z) =  gluUnProject(pos[0], viewport[3]-pos[1],0 , model=modelview, proj=projection, view=viewport)
-        bottom_right  = (x/(self.data.shape[2]+self.subplotBorder), y/(self.data.shape[1]+self.subplotBorder))
+        bottom_right  = (x/(self.data.shape[2]+self.subplotSceneBorder()), y/(self.data.shape[1]+self.subplotSceneBorder()))
 
         for x in numpy.arange(max(0,math.floor(top_left[0])),min(self.stackWidth,math.floor(bottom_right[0])+1)):
             for y in numpy.arange(max(0,math.floor(bottom_right[1])),math.floor(top_left[1]+1)):
@@ -512,11 +562,10 @@ class View(QtOpenGL.QGLWidget):
                     visible.append(y*self.stackWidth+x)
         return visible
     def updateTextures(self,images):
-
         for img in images:
             if(img not in self.textureIds):
                 self.parent.statusBar.showMessage("Loading images...")
-                QtCore.QCoreApplication.processEvents()
+#                QtCore.QCoreApplication.processEvents()
                 QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
 
                 self.textureIds[img] = glGenTextures(1)
@@ -539,34 +588,39 @@ class View(QtOpenGL.QGLWidget):
                 glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
                 glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-        textureImages = self.textureIds.keys()
-        QtGui.QApplication.restoreOverrideCursor()
-        self.parent.statusBar.clearMessage()
+                QtGui.QApplication.restoreOverrideCursor()
+        textureImages = self.textureIds.keys()        
+        self.parent.statusBar.showMessage("Loading images...done.",1000)
+#        self.parent.statusBar.clearMessage()
 #        for img in textureImages:
 #            if img not in images:
 #                glDeleteTextures(self.textureIds[img])
 #                del self.textureIds[img]
     def wheelEvent(self, event):
-        self.scaleZoom(1+(event.delta()/8.0)/360)
+        self.translation[1] += event.delta()
+        self.updateGL()
+        # Do not allow zooming
+       # self.scaleZoom(1+(event.delta()/8.0)/360)
+
     def keyPressEvent(self, event):
         delta = self.width()/20
-        if(event.key() == Qt.Qt.Key_Up):
+        if(event.key() == QtCore.Qt.Key_Up):
             self.translation[1] -= delta
             self.updateGL()
-        elif(event.key() == Qt.Qt.Key_Down):
+        elif(event.key() == QtCore.Qt.Key_Down):
             self.translation[1] += delta
             self.updateGL()
-        elif(event.key() == Qt.Qt.Key_Left):
+        elif(event.key() == QtCore.Qt.Key_Left):
             self.translation[0] += delta
             self.updateGL()
-        elif(event.key() == Qt.Qt.Key_Right):
+        elif(event.key() == QtCore.Qt.Key_Right):
             self.translation[0] -= delta
             self.updateGL()
-        elif(event.key() == Qt.Qt.Key_Plus):
+        elif(event.key() == QtCore.Qt.Key_Plus):
             self.scaleZoom(1.05)
-        elif(event.key() == Qt.Qt.Key_Minus):
+        elif(event.key() == QtCore.Qt.Key_Minus):
             self.scaleZoom(0.95)
-        elif(event.key() == Qt.Qt.Key_F):
+        elif(event.key() == QtCore.Qt.Key_F):
             self.parent.statusBar.showMessage("Flaged "+str(self.hoveredImage()),1000)
     def mouseReleaseEvent(self, event):
         self.dragging = False
@@ -613,12 +667,14 @@ class View(QtOpenGL.QGLWidget):
         viewport = glGetIntegerv(GL_VIEWPORT);
         (x,y,z) =  gluProject(x, y,z , model=modelview, proj=projection, view=viewport)
         return (x,viewport[3]-y,z)
+    # Returns the x,y,z position of a particular window position
     def windowToScene(self,x,y,z):
             modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
             projection = glGetDoublev(GL_PROJECTION_MATRIX)
             viewport = glGetIntegerv(GL_VIEWPORT);
             (x,y,z) =  gluUnProject(x, viewport[3]-y,z , model=modelview, proj=projection, view=viewport)
             return (x,y,z)
+    # Returns the image that it at a particular location
     def windowToImage(self,x,y,z,checkExistance=True):
         if(self.has_data > 0):
             shape = self.data.shape
@@ -627,7 +683,7 @@ class View(QtOpenGL.QGLWidget):
             viewport = glGetIntegerv(GL_VIEWPORT);
             (x,y,z) =  gluUnProject(x, viewport[3]-y,z , model=modelview, proj=projection, view=viewport)
             
-            (x,y) = (int(numpy.floor(x/(shape[2]+self.subplotBorder))),int(numpy.floor(y/(shape[1]+self.subplotBorder))))
+            (x,y) = (int(numpy.floor(x/(shape[2]+self.subplotSceneBorder()))),int(numpy.floor(y/(shape[1]+self.subplotSceneBorder()))))
             if(x < 0 or x >= self.stackWidth or y < 0):
                 return None            
             if(checkExistance and x + y*self.stackWidth >= self.data.shape[0]):
@@ -642,9 +698,13 @@ class View(QtOpenGL.QGLWidget):
         self.translation[0] *= ratio
         self.translation[1] *= ratio           
         self.updateGL()
+    # Calculate the appropriate zoom level such that the windows will exactly fill the viewport widthwise
+    def zoomFromStackWidth(self,width):
+        # We'll assume all images have the same size and the projection is isometric
+        if(self.has_data is not True):
+            return 1
+        self.scaleZoom((self.width()-width*self.subplotBorder)/(width*(self.sceneToWindow(self.data.shape[1], self.data.shape[2],0)[0] - self.sceneToWindow(0,0,0)[0])))
     def clear(self):
-
-        print "Clearing view"
         self.has_data = False
         self.data = {}
         self.clearTextures()
@@ -653,7 +713,10 @@ class View(QtOpenGL.QGLWidget):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
     def setStackWidth(self,width):
-        
+        self.stackWidth = width
+        if(self.has_data is not True):
+            return 1
+        self.zoomFromStackWidth(width)
 #        plot = self.imageToScene(self.windowToImage(self.width()/2,self.height()/2,0))
 #        print plot
 #        image = plot[0]+plot[1]*max(plot[0],self.parent.view.stackWidth)
@@ -664,10 +727,14 @@ class View(QtOpenGL.QGLWidget):
             image = self.data.shape[0]-1
         if(image < 0):
             image = 0
-        self.parent.view.stackWidth = width
+        
         new_plot = self.imageToCell(image)
-        self.translation[1] -= (self.sceneToWindow(0,plot[1],0)[1]-self.sceneToWindow(0,new_plot[1],0)[1])*(self.data.shape[1]+self.subplotBorder)
+        self.translation[1] -= (self.sceneToWindow(0,plot[1],0)[1]-self.sceneToWindow(0,new_plot[1],0)[1])*(self.data.shape[1]+self.subplotSceneBorder())
         self.parent.view.updateGL()
+    def stackSceneWidth(self,width):
+        return 
+    def subplotSceneBorder(self):
+        return self.subplotBorder/self.zoom
 
 
         
