@@ -342,15 +342,45 @@ class CXITree(QtGui.QTreeWidget):
         return 0
         
 
+class ImageLoader(QtCore.QObject):
+    imageLoaded = QtCore.Signal(int) 
+    def __init__(self,parent = None,view = None):
+        QtCore.QObject.__init__(self,parent)  
+        self.view = view
+        self.imageData = {}
+        self.loaded = {}
+    @QtCore.Slot(int,int)
+    def loadImage(self,img):
+        if(img in self.loaded):
+            return
+        self.loaded[img] = True
+        data = self.view.data[img,:]
+        offset = float(numpy.min(data));
+        scale = float(numpy.max(data)-offset)
+        if(scale == 0):
+            scale = 1
+        self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
+        gamma = self.view.parent.datasetProp.displayGamma.value();
+        if(self.view.parent.datasetProp.imageStackBox.isVisible() and
+           self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
+            offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
+            scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
+        self.imageData[img][:,:,0] = 255*((data-offset)/scale)**(gamma)
+        self.imageData[img][:,:,1] = 255*((data-offset)/scale)**(gamma)
+        self.imageData[img][:,:,2] = 255*((data-offset)/scale)**(gamma)
+        self.imageLoaded.emit(img)
+
 class View(QtOpenGL.QGLWidget):
+    needsImage = QtCore.Signal(int) 
     def __init__(self,parent=None):
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
         self.zoom = 4.0
         self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.data = {}
+        self.texturesLoading = {}
         self.textureIds = {}
-        self.textureImages = {}
+#        self.textureImages = {}
         self.texture = {}
         self.parent = parent
         self.setMouseTracking(True)
@@ -361,6 +391,17 @@ class View(QtOpenGL.QGLWidget):
         self.mode = None
         self.stackWidth = 1;
         self.has_data = False
+
+        self.imageLoader = QtCore.QThread()
+        self.loaderThread = ImageLoader(None,self)
+        self.needsImage.connect(self.loaderThread.loadImage)
+        self.loaderThread.imageLoaded.connect(self.generateTexture)
+        self.loaderThread.moveToThread(self.imageLoader)    
+        self.imageLoader.start()
+    def stopThreads(self):
+        while(self.imageLoader.isRunning()):
+            self.imageLoader.quit()
+            QtCore.QThread.sleep(1)
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClearDepth(1.0)
@@ -482,7 +523,7 @@ class View(QtOpenGL.QGLWidget):
                     glVertex3f (0, 0, 0.0);
                     glEnd ();
                     glDisable(GL_TEXTURE_2D)
-                    if(0 and img == self.lastHoveredImage):
+                    if(img == self.lastHoveredImage):
                         glPushMatrix()
                         glColor3f(1.0,1.0,1.0);
                         glLineWidth(0.5/self.zoom)
@@ -561,41 +602,20 @@ class View(QtOpenGL.QGLWidget):
                 if(img < self.data.shape[0]):
                     visible.append(y*self.stackWidth+x)
         return visible
+    @QtCore.Slot(int)
+    def generateTexture(self,img):
+        texture = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, texture)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.loaderThread.imageData[img].shape[1], self.loaderThread.imageData[img].shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, self.loaderThread.imageData[img]);
+        self.textureIds[img] = texture
+        self.updateGL()
     def updateTextures(self,images):
         for img in images:
             if(img not in self.textureIds):
-                self.parent.statusBar.showMessage("Loading images...")
-#                QtCore.QCoreApplication.processEvents()
-                QtGui.QApplication.setOverrideCursor(QtGui.QCursor(QtCore.Qt.BusyCursor))
-
-                self.textureIds[img] = glGenTextures(1)
-                data = self.data[img,:]
-                offset = float(numpy.min(data));
-                scale = float(numpy.max(data)-offset)
-                if(scale == 0):
-                    scale = 1
-                imageData = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
-                gamma = self.parent.datasetProp.displayGamma.value();
-                if(self.parent.datasetProp.imageStackBox.isVisible() and
-                   self.parent.datasetProp.imageStackGlobalScale.isChecked()):
-                    offset = self.parent.datasetProp.imageStackGlobalScale.minimum
-                    scale = float(self.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-                imageData[:,:,0] = 255*((data-offset)/scale)**(gamma)
-                imageData[:,:,1] = 255*((data-offset)/scale)**(gamma)
-                imageData[:,:,2] = 255*((data-offset)/scale)**(gamma)
-                glBindTexture(GL_TEXTURE_2D, self.textureIds[img])
-                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-                glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-                glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-                QtGui.QApplication.restoreOverrideCursor()
-        textureImages = self.textureIds.keys()        
-        self.parent.statusBar.showMessage("Loading images...done.",1000)
-#        self.parent.statusBar.clearMessage()
-#        for img in textureImages:
-#            if img not in images:
-#                glDeleteTextures(self.textureIds[img])
-#                del self.textureIds[img]
+                self.needsImage.emit(img)
     def wheelEvent(self, event):
         self.translation[1] += event.delta()
         self.updateGL()
@@ -827,4 +847,6 @@ QtCore.QCoreApplication.setApplicationName("CXI Viewer");
 app = QtGui.QApplication(sys.argv)
 aw = Viewer()
 aw.show()
-sys.exit(app.exec_())
+ret = app.exec_()
+aw.view.stopThreads()
+sys.exit(ret)
