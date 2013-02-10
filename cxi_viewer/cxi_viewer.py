@@ -369,6 +369,9 @@ class ImageLoader(QtCore.QObject):
         self.imageData[img][:,:,1] = 255*((data-offset)/scale)**(gamma)
         self.imageData[img][:,:,2] = 255*((data-offset)/scale)**(gamma)
         self.imageLoaded.emit(img)
+    def clear(self):
+        self.imageData = {}
+        self.loaded = {}
 
 class View(QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int) 
@@ -816,6 +819,7 @@ class View(QtOpenGL.QGLWidget):
         self.data = {}
         self.clearTextures()
         self.updateGL()
+        self.loaderThread.clear()
     def clearTextures(self):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
