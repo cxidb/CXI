@@ -398,6 +398,11 @@ class View(QtOpenGL.QGLWidget):
         self.loaderThread.imageLoaded.connect(self.generateTexture)
         self.loaderThread.moveToThread(self.imageLoader)    
         self.imageLoader.start()
+
+        self.loadingImageAnimationFrame = 0
+        self.loadingImageAnimationTimer = QtCore.QTimer()
+        self.loadingImageAnimationTimer.timeout.connect(self.incrementLoadingImageAnimationFrame)
+        self.loadingImageAnimationTimer.start(100)
     def stopThreads(self):
         while(self.imageLoader.isRunning()):
             self.imageLoader.quit()
@@ -416,7 +421,15 @@ class View(QtOpenGL.QGLWidget):
         if(self.width() and self.height()):
             gluOrtho2D(0.0, self.width(), 0.0, self.height());        
         glMatrixMode(GL_MODELVIEW);
-        glLoadIdentity();  
+        glLoadIdentity();
+
+        self.circle_image = QtGui.QImage(100,100,QtGui.QImage.Format_ARGB32_Premultiplied)
+        painter = QtGui.QPainter(self.circle_image)
+        painter.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.SmoothPixmapTransform)
+        painter.setBrush(QtGui.QBrush(QtGui.QColor(255,255,255)))
+        painter.drawEllipse(0,0,100,100)
+        painter.end()
+        self.circle_texture = self.bindTexture(self.circle_image,GL_TEXTURE_2D,GL_RGB,QtOpenGL.QGLContext.LinearFilteringBindOption)
     def resizeGL(self, w, h):
         '''
         Resize the GL window 
@@ -488,6 +501,78 @@ class View(QtOpenGL.QGLWidget):
             v += 10.0/self.zoom 
         glEnd ();
         glPopMatrix()
+    @QtCore.Slot()
+    def incrementLoadingImageAnimationFrame(self):
+        self.loadingImageAnimationFrame += 1
+        self.updateGL()
+    def drawRectangle(self,width,height,filled=True):
+        if(filled):
+            glBegin(GL_POLYGON)
+        else:
+            glBegin(GL_LINE_LOOP)
+        glVertex3f (0, height, 0.0)
+        glVertex3f (width, height, 0.0)
+        glVertex3f (width, 0, 0.0)
+        glVertex3f (0, 0, 0.0)
+        glEnd()
+    def drawDisk(self,center,radius,nsides=20,filled=True):
+        if(filled):
+            glEnable(GL_TEXTURE_2D)
+            glBindTexture (GL_TEXTURE_2D, self.circle_texture);
+            glBegin (GL_QUADS);
+            glTexCoord2f (0.0, 1.0)
+            glVertex3f (center[0]-radius, center[1]-radius, 0.0)
+            glTexCoord2f (1.0, 1.0)
+            glVertex3f (center[0]+radius, center[1]-radius, 0.0)
+            glTexCoord2f (1.0, 0.0)
+            glVertex3f (center[0]+radius, center[1]+radius, 0.0)
+            glTexCoord2f (0.0, 0.0)
+            glVertex3f (center[0]-radius, center[1]+radius, 0.0)
+            glEnd ();
+            glDisable(GL_TEXTURE_2D)
+           # glPointSize(2*radius*self.zoom)
+           # glEnable(GL_POINT_SMOOTH)
+           # glBegin(GL_POINTS)
+           # glVertex3f(center[0],center[1],0)
+           # glEnd();
+        else:
+            glBegin(GL_LINE_LOOP)
+            for side in range(0,nsides):
+                angle = 2*math.pi*side/nsides
+                glVertex3f(radius*math.cos(angle)+center[0],radius*math.sin(angle)+center[1],0)
+            glEnd()
+    def paintLoadingImage(self,img):
+        frame = self.loadingImageAnimationFrame%24
+        img_width = self.data.shape[2]
+        img_height = self.data.shape[1]
+        glPushMatrix()
+        pos_x = img%self.stackWidth
+        pos_y = math.floor(img/self.stackWidth)
+        glTranslatef(self.subplotSceneBorder()/2.+(img_width+self.subplotSceneBorder())*pos_x,self.subplotSceneBorder()/2.+(img_height+self.subplotSceneBorder())*pos_y,0)
+        # Draw a ball in the center                
+        path_radius = min(img_width,img_height)/10.0
+        path_center = (img_width/2.0,6*img_height/10.0)
+        radius = min(img_width,img_height)/40.0
+        ndisks = 8
+        for i in range(0,ndisks): 
+            angle = math.pi/2.0-2*math.pi*i/ndisks
+            if(i > frame/3):
+                continue
+            elif(i == frame/3):        
+                glColor3f((frame%3+1)/4.0,(frame%3+1)/4.0,(frame%3+1)/4.0);
+            else:
+                glColor3f(3/4.0,3/4.0,3/4.0);
+            self.drawDisk((path_center[0]+math.cos(angle)*path_radius,path_center[1]+math.sin(angle)*path_radius),radius,100)
+        glColor3f(2/4.0,2/4.0,2/4.0);
+        self.drawRectangle(img_width,img_height,filled=False)
+        font = QtGui.QFont()
+        metrics = QtGui.QFontMetrics(font);
+        width = metrics.width("Loading...");
+        ratio = (img_width*self.zoom/4.0)/width
+        font.setPointSize(font.pointSize()*ratio)
+        glColor3f(3/4.0,3/4.0,3/4.0);
+        self.renderText(3*img_width/8.0,3*img_height/10.0,0.0,"Loading...",font);
+        glPopMatrix()
     def paintGL(self):
         '''
         Drawing routine
@@ -536,7 +621,9 @@ class View(QtOpenGL.QGLWidget):
                         glPopMatrix()
                     elif(img == self.selectedImage):
                         self.paintSelectedImageBorder(img_width,img_height)
-                    glPopMatrix()                                            
+                    glPopMatrix()
+                for img in (set(visible) - set(self.textureIds)):
+                    self.paintLoadingImage(img)
         glFlush()
     def imshow(self,data,subplot_x=0,subplot_y=0,update=True):
         self.data[(subplot_x,subplot_y)] = data
