@@ -432,7 +432,7 @@ class View(QtOpenGL.QGLWidget):
         painter.setBrush(QtGui.QBrush(QtGui.QColor(255,255,255)))
         painter.drawEllipse(0,0,100,100)
         painter.end()
-        self.circle_texture = self.bindTexture(self.circle_image,GL_TEXTURE_2D,GL_RGB,QtOpenGL.QGLContext.LinearFilteringBindOption)
+        self.circle_texture = self.bindTexture(self.circle_image,GL_TEXTURE_2D,GL_RGBA,QtOpenGL.QGLContext.LinearFilteringBindOption)
     def resizeGL(self, w, h):
         '''
         Resize the GL window 
@@ -706,8 +706,16 @@ class View(QtOpenGL.QGLWidget):
         for img in images:
             if(img not in self.textureIds):
                 self.needsImage.emit(img)
-    def wheelEvent(self, event):
+    def wheelEvent(self, event):        
         self.translation[1] += event.delta()
+        if(self.has_data):
+            margin = self.height()/2.0
+            img_height = (self.data.shape[1]+self.subplotSceneBorder())*self.zoom
+            if(self.translation[1] > (img_height-self.height())/2 + margin):
+                self.translation[1] = (img_height-self.height())/2 + margin
+            stack_height = math.ceil(self.data.shape[0]/self.stackWidth)*img_height
+            if(self.translation[1] < -stack_height+self.height()/2-img_height/2 - margin):
+                self.translation[1] = -stack_height+self.height()/2-img_height/2 - margin
         self.updateGL()
         # Do not allow zooming
        # self.scaleZoom(1+(event.delta()/8.0)/360)
