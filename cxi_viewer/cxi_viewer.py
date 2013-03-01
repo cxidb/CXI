@@ -707,7 +707,7 @@ class View(QtOpenGL.QGLWidget):
             if(img not in self.textureIds):
                 self.needsImage.emit(img)
     def wheelEvent(self, event):        
-        self.translation[1] += event.delta()
+        self.translation[1] -= event.delta()
         if(self.has_data):
             margin = self.height()/2.0
             img_height = (self.data.shape[1]+self.subplotSceneBorder())*self.zoom
