@@ -254,30 +254,34 @@ class CXITree(QtGui.QTreeWidget):
                 print str(item.text(2))
                 self.parent.statusBar.showMessage("Loaded %s" % (str(item.text(2))),1000)
             elif(len(data.shape) == 3):
-                msgBox = QtGui.QMessageBox();
-                msgBox.setText("Display data as a 2D series of images or as a 3D volume?");
-                if('axes' in self.datasets[str(item.text(2))].attrs.keys() is not None or data.shape[0] > (data.shape[1] + data.shape[2]) * 3 or
-                   data.shape[0] < (data.shape[1] + data.shape[2]) / 3):
-                    button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.AcceptRole);
-                    button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.RejectRole);
-                else:
-                    button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.RejectRole);
-                    button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.AcceptRole);
-                res = msgBox.exec_();
-                if(msgBox.clickedButton() == button_2D):
-                    self.parent.view.clear()
-                    self.parent.view.loadStack(data)
-#                    self.parent.view.imshow(data[0,:,:])
-                    self.parent.statusBar.showMessage("Loaded slice 0",1000)
-                    data.form = '2D Image Stack'
-                elif(msgBox.clickedButton() == button_3D):
-                    wrnBox = QtGui.QMessageBox();
-                    wrnBox.setText("CXI Viewer currently does not support the visualization of 3D volumes.")
-                    wrnBox.setInformativeText('Please use an alternative such as LLNL\'s excelent <a href="http://llnl.gov/visit">VisIt</a>.')
-                    wrnBox.setIcon(QtGui.QMessageBox.Warning)
-                    wrnBox.exec_();
-                    return
-                    data.form = '3D Image Volume'                    
+                #msgBox = QtGui.QMessageBox();
+                #msgBox.setText("Display data as a 2D series of images or as a 3D volume?");
+                #if('axes' in self.datasets[str(item.text(2))].attrs.keys() is not None or data.shape[0] > (data.shape[1] + data.shape[2]) * 3 or
+                #   data.shape[0] < (data.shape[1] + data.shape[2]) / 3):
+                #    button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.AcceptRole);
+                #    button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.RejectRole);
+                #else:
+                #    button_2D = msgBox.addButton(self.tr("2D slices"), QtGui.QMessageBox.RejectRole);
+                #    button_3D = msgBox.addButton(self.tr("Volume"), QtGui.QMessageBox.AcceptRole);
+                #res = msgBox.exec_();
+                #if(msgBox.clickedButton() == button_2D):
+                #    self.parent.view.clear()
+                #    self.parent.view.loadStack(data)
+#               #     self.parent.view.imshow(data[0,:,:])
+                #    self.parent.statusBar.showMessage("Loaded slice 0",1000)
+                #    data.form = '2D Image Stack'
+                #elif(msgBox.clickedButton() == button_3D):
+                #    wrnBox = QtGui.QMessageBox();
+                #    wrnBox.setText("CXI Viewer currently does not support the visualization of 3D volumes.")
+                #    wrnBox.setInformativeText('Please use an alternative such as LLNL\'s excelent <a href="http://llnl.gov/visit">VisIt</a>.')
+                #    wrnBox.setIcon(QtGui.QMessageBox.Warning)
+                #    wrnBox.exec_();
+                #    return
+                #    data.form = '3D Image Volume'                    
+                self.parent.view.clear()
+                self.parent.view.loadStack(data)
+                self.parent.statusBar.showMessage("Loaded slice 0",1000)
+                data.form = '2D Image Stack'
             else:
                 QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets with more than 3 dimensions. The selected dataset has %d dimensions." %(len(data.shape))))
                 return
