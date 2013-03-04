@@ -726,11 +726,18 @@ class View(QtOpenGL.QGLWidget):
 
     def keyPressEvent(self, event):
         delta = self.width()/20
+        img_height =  self.data.shape[1]*self.zoom+self.subplotBorder
         if(event.key() == QtCore.Qt.Key_Up):
             self.translation[1] -= delta
             self.updateGL()
         elif(event.key() == QtCore.Qt.Key_Down):
             self.translation[1] += delta
+            self.updateGL()
+        elif(event.key() == QtCore.Qt.Key_P):
+            self.translation[1] -= img_height
+            self.updateGL()
+        elif(event.key() == QtCore.Qt.Key_N):
+            self.translation[1] += img_height
             self.updateGL()
         elif(event.key() == QtCore.Qt.Key_Left):
             self.translation[0] += delta
