@@ -727,6 +727,7 @@ class View(QtOpenGL.QGLWidget):
     def keyPressEvent(self, event):
         delta = self.width()/20
         img_height =  self.data.shape[1]*self.zoom+self.subplotBorder
+        stack_height = math.ceil((self.data.shape[0]/self.stackWidth))*img_height
         if(event.key() == QtCore.Qt.Key_Up):
             self.translation[1] -= delta
             self.updateGL()
@@ -744,6 +745,12 @@ class View(QtOpenGL.QGLWidget):
             self.updateGL()
         elif(event.key() == QtCore.Qt.Key_PageDown):
             self.translation[1] += img_height
+            self.updateGL()
+        elif(event.key() == QtCore.Qt.Key_End):
+            self.translation[1] = 0
+            self.updateGL()
+        elif(event.key() == QtCore.Qt.Key_Home):
+            self.translation[1] = -stack_height
             self.updateGL()
         elif(event.key() == QtCore.Qt.Key_Left):
             self.translation[0] += delta
