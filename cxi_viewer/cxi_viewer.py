@@ -739,6 +739,12 @@ class View(QtOpenGL.QGLWidget):
         elif(event.key() == QtCore.Qt.Key_N):
             self.translation[1] += img_height
             self.updateGL()
+        elif(event.key() == QtCore.Qt.Key_PageUp):
+            self.translation[1] -= img_height
+            self.updateGL()
+        elif(event.key() == QtCore.Qt.Key_PageDown):
+            self.translation[1] += img_height
+            self.updateGL()
         elif(event.key() == QtCore.Qt.Key_Left):
             self.translation[0] += delta
             self.updateGL()
