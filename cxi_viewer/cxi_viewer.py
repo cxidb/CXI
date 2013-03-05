@@ -710,8 +710,9 @@ class View(QtOpenGL.QGLWidget):
         for img in images:
             if(img not in self.textureIds):
                 self.needsImage.emit(img)
-    def wheelEvent(self, event):        
-        self.translation[1] -= event.delta()
+    def wheelEvent(self, event):    
+        settings = QtCore.QSettings()    
+        self.translation[1] -= event.delta()*settings.value("scrollDirection")
         if(self.has_data):
             margin = self.height()/2.0
             img_height = (self.data.shape[1]+self.subplotSceneBorder())*self.zoom
@@ -907,6 +908,8 @@ class Viewer(QtGui.QMainWindow):
             self.restoreGeometry(settings.value("geometry"));
         if(settings.contains("windowState")):
             self.restoreState(settings.value("windowState"));
+        if(not settings.contains("scrollDirection")):
+            settings.setValue("scrollDirection", 1);  
         QtCore.QTimer.singleShot(0,self.after_show)
 
     def after_show(self):
@@ -918,6 +921,10 @@ class Viewer(QtGui.QMainWindow):
         self.openFile = QtGui.QAction("Open",self)
         self.fileMenu.addAction(self.openFile)
         self.openFile.triggered.connect(self.openFileClicked)
+        self.preferences = QtGui.QAction("Preferences",self)
+        self.fileMenu.addAction(self.preferences)
+        self.preferences.triggered.connect(self.preferencesClicked)
+
         self.geometryMenu = self.menuBar().addMenu(self.tr("&Geometry"));
         self.assembleGeometry = QtGui.QAction("Assemble",self)
         self.geometryMenu.addAction(self.assembleGeometry)
@@ -961,7 +968,54 @@ class Viewer(QtGui.QMainWindow):
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
         QtGui.QMainWindow.closeEvent(self,event)
-                          
+
+    def preferencesClicked(self):
+        diag = PreferencesDialog(self)
+        settings = QtCore.QSettings()
+        if(diag.exec_()):
+            if(diag.natural.isChecked()):
+                settings.setValue("scrollDirection",-1)
+            else:
+                settings.setValue("scrollDirection",1)
+   
+class PreferencesDialog(QtGui.QDialog):
+    def __init__(self,parent):
+        QtGui.QDialog.__init__(self,parent,QtCore.Qt.WindowTitleHint)
+        self.resize(300,150)
+
+        settings = QtCore.QSettings()
+
+        buttonBox = QtGui.QDialogButtonBox(QtCore.Qt.Horizontal)
+        buttonBox.setStandardButtons(QtGui.QDialogButtonBox.Ok | QtGui.QDialogButtonBox.Cancel)
+        buttonBox.accepted.connect(self.accept)
+        buttonBox.rejected.connect(self.reject)
+        self.setLayout(QtGui.QVBoxLayout());
+        grid = QtGui.QGridLayout()
+        grid.addWidget(QtGui.QLabel("Scroll Direction:",self),0,0)
+        self.natural = QtGui.QRadioButton("Natural (Mac)")
+        self.traditional = QtGui.QRadioButton("Traditional (Pc)")
+        if(settings.value("scrollDirection") == -1):
+            self.natural.setChecked(True)
+            self.traditional.setChecked(False)
+        else:
+            self.natural.setChecked(False)
+            self.traditional.setChecked(True)
+        grid.addWidget(self.traditional,0,1);
+        grid.addWidget(self.natural,1,1);
+#    We'll need this when we add more options
+#        f = QtGui.QFrame(self)
+#        f.setFrameStyle(QtGui.QFrame.HLine | (QtGui.QFrame.Sunken))
+#        grid.addWidget(f,2,0,1,2);
+        self.layout().addLayout(grid)
+        self.layout().addStretch()
+
+        f = QtGui.QFrame(self)
+        f.setFrameStyle(QtGui.QFrame.HLine | (QtGui.QFrame.Sunken)) 
+        self.layout().addWidget(f)
+        self.layout().addWidget(buttonBox)
+
+
+
 
 
 QtCore.QCoreApplication.setOrganizationName("CXIDB");
