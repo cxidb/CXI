@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-import h5py
+
 import sys
 from OpenGL.GL import *
 from OpenGL.GLU import *
 #from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
 from PySide import QtGui, QtCore, QtOpenGL
-from operator import mul
+
 import numpy
 import math
 from geometry import *
@@ -34,10 +34,10 @@ class Viewer(QtGui.QMainWindow):
         self.statusBar.showMessage("Initializing...")
         self.splitter = QtGui.QSplitter(self)
         self.view = View(self)
-        self.tree = CXITree(self)
+        self.CXITree = CXITree(self)
         self.datasetProp = DatasetProp(self)
 #        self.datasetProp.hide()                
-        self.splitter.addWidget(self.tree)
+        self.splitter.addWidget(self.CXITree)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.datasetProp)
         
@@ -59,7 +59,7 @@ class Viewer(QtGui.QMainWindow):
 
     def after_show(self):
         if(len(sys.argv) > 1):
-            self.tree.buildTree(sys.argv[1])
+            self.CXITree.buildTree(sys.argv[1])
         
     def init_menus(self):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
@@ -91,16 +91,16 @@ class Viewer(QtGui.QMainWindow):
     def openFileClicked(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
         if(fileName[0]):
-            self.tree.buildTree(fileName[0])
+            self.CXITree.buildTree(fileName[0])
     def assembleGeometryClicked(self):
-        self.geometry.assemble_detectors(self.tree.f)
+        self.geometry.assemble_detectors(self.CXITree.f)
     def viewFileTreeClicked(self,checked):
         if(checked):
             self.statusBar.showMessage("Showing CXI file tree",1000)
-            self.tree.show()
+            self.CXITree.show()
         else:
             self.statusBar.showMessage("Hiding CXI file tree",1000)
-            self.tree.hide()
+            self.CXITree.hide()
     def viewDatasetPropertiesClicked(self,checked):
         if(checked):
             self.statusBar.showMessage("Showing dataset properties",1000)

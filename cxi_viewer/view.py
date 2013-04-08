@@ -2,6 +2,8 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 #from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
 from PySide import QtGui, QtCore, QtOpenGL
+import numpy
+import math
 
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 

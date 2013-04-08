@@ -1,5 +1,6 @@
 #from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
 from PySide import QtGui, QtCore, QtOpenGL
+from operator import mul
 
 def sizeof_fmt(num):
     for x in ['bytes','kB','MB','GB']:
