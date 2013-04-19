@@ -83,15 +83,6 @@ class DatasetProp(QtGui.QWidget):
         vbox.addLayout(hbox)
         self.displayBox.vbox.addLayout(vbox)
         
-        #hbox = QtGui.QHBoxLayout()
-        #hbox.addWidget(QtGui.QLabel("Gamma:"))
-        #self.displayGamma = QtGui.QDoubleSpinBox(parent=self)
-        #self.displayGamma.setValue(0.25);
-        #self.displayGamma.setSingleStep(0.25);
-        #self.displayGamma.valueChanged.connect(self.displayChanged)
-        #hbox.addWidget(self.displayGamma)
-        
-
         colormapIcons = paintColormapIcons()
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Colormap:"))
@@ -105,6 +96,21 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(self.displayColormap)
         self.displayBox.vbox.addLayout(hbox)
         
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Minimum value:"))
+        self.displayMin = QtGui.QDoubleSpinBox(parent=self)
+        self.displayMin.setValue(0.)
+        self.displayMin.setSingleStep(100.)
+        self.displayMin.valueChanged.connect(self.displayChanged)
+        hbox.addWidget(self.displayMin)
+
+        hbox.addWidget(QtGui.QLabel("Maximum value:"))
+        self.displayMax = QtGui.QDoubleSpinBox(parent=self)
+        self.displayMax.setValue(10000.)
+        self.displayMax.setSingleStep(100.)
+        self.displayMax.valueChanged.connect(self.displayChanged)
+        hbox.addWidget(self.displayMax)
+
         self.imageBox = QtGui.QGroupBox("Image Properties");
         self.imageBox.vbox = QtGui.QVBoxLayout()
         self.imageBox.setLayout(self.imageBox.vbox)

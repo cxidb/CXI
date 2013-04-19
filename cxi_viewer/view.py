@@ -20,14 +20,16 @@ class ImageLoader(QtCore.QObject):
         self.setColormap()
     @QtCore.Slot(int,int)
     def update(self,init=False):
-        if self.view.parent.datasetProp.displayLin.isChecked(): self.setNorm('lin')
-        elif self.view.parent.datasetProp.displayLog.isChecked(): self.setNorm('log')
-        elif self.view.parent.datasetProp.displayPow.isChecked(): self.setNorm('pow')
-        self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
+        if hasattr(self.view.parent,'datasetProp'):
+            if self.view.parent.datasetProp.displayLin.isChecked(): self.setNorm('lin')
+            elif self.view.parent.datasetProp.displayLog.isChecked(): self.setNorm('log')
+            elif self.view.parent.datasetProp.displayPow.isChecked(): self.setNorm('pow')
+            vmin = self.view.parent.datasetProp.displayMin.value()
+            vmax = self.view.parent.datasetProp.displayMax.value()
+            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText(),vmin,vmax)
     def loadImage(self,img):
         if(img in self.loaded):
            return
-        self.update()
         self.loaded[img] = True
         data = self.view.data[img,:]
         offset = float(numpy.min(data))
@@ -45,7 +47,7 @@ class ImageLoader(QtCore.QObject):
         self.imageLoaded.emit(img)
     def setColormap(self,name='jet'):
         self.mappable.set_cmap(name)
-    def setNorm(self,name='log',vmin=None,vmax=None):
+    def setNorm(self,name='log',vmin=0.,vmax=10000.):
         if name == 'lin':
             norm = colors.Normalize(vmin,vmax)
             self.gamma = 1
