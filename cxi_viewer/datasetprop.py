@@ -1,6 +1,9 @@
 #from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
 from PySide import QtGui, QtCore, QtOpenGL
 from operator import mul
+import numpy,ctypes
+from matplotlib import colors
+from matplotlib import cm
 
 def sizeof_fmt(num):
     for x in ['bytes','kB','MB','GB']:
@@ -61,26 +64,47 @@ class DatasetProp(QtGui.QWidget):
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(QtGui.QLabel("Scaling:"))
         self.displayLin = QtGui.QRadioButton("Linear")
-        self.displayLin.toggled.connect(self.displayScalingChanged)
+        self.displayLin.toggled.connect(self.displayChanged)
         self.displayLog = QtGui.QRadioButton("Logarithmic")
-        self.displayLog.toggled.connect(self.displayScalingChanged)
+        self.displayLog.toggled.connect(self.displayChanged)
         self.displayPow = QtGui.QRadioButton("Power")
-        self.displayPow.toggled.connect(self.displayScalingChanged)
+        self.displayPow.toggled.connect(self.displayChanged)
         self.displayLog.setChecked(True)
         vbox.addWidget(self.displayLin)
         vbox.addWidget(self.displayLog)
-        vbox.addWidget(self.displayPow)
-        self.displayBox.vbox.addLayout(vbox)
-        
+
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Gamma:"))
         self.displayGamma = QtGui.QDoubleSpinBox(parent=self)
         self.displayGamma.setValue(0.25);
         self.displayGamma.setSingleStep(0.25);
-        self.displayGamma.valueChanged.connect(self.displayScalingChanged)
-        hbox.addWidget(self.displayGamma)
-        self.displayBox.vbox.addLayout(hbox)
+        self.displayGamma.valueChanged.connect(self.displayChanged)
+        hbox.addWidget(self.displayPow)
+        hbox.addWidget(self.displayGamma)        
+        vbox.addLayout(hbox)
+        self.displayBox.vbox.addLayout(vbox)
+        
+        #hbox = QtGui.QHBoxLayout()
+        #hbox.addWidget(QtGui.QLabel("Gamma:"))
+        #self.displayGamma = QtGui.QDoubleSpinBox(parent=self)
+        #self.displayGamma.setValue(0.25);
+        #self.displayGamma.setSingleStep(0.25);
+        #self.displayGamma.valueChanged.connect(self.displayChanged)
+        #hbox.addWidget(self.displayGamma)
+        
 
+        colormapIcons = paintColormapIcons()
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Colormap:"))
+        self.displayColormap = QtGui.QComboBox(parent=self)
+        self.displayColormap.addItem(colormapIcons.pop('jet'),'jet')
+        self.displayColormap.addItem(colormapIcons.pop('hot'),'hot')        
+        self.displayColormap.addItem(colormapIcons.pop('gray'),'gray')        
+        for colormap in colormapIcons.keys():
+            self.displayColormap.addItem(colormapIcons[colormap],colormap)
+        self.displayColormap.currentIndexChanged.connect(self.displayChanged)
+        hbox.addWidget(self.displayColormap)
+        self.displayBox.vbox.addLayout(hbox)
+        
         self.imageBox = QtGui.QGroupBox("Image Properties");
         self.imageBox.vbox = QtGui.QVBoxLayout()
         self.imageBox.setLayout(self.imageBox.vbox)
@@ -150,6 +174,28 @@ class DatasetProp(QtGui.QWidget):
             self.imageStackGlobalScale.maximum = numpy.max(self.data)
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
-    def displayScalingChanged(self,value):
+
+    def displayChanged(self,value):
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
+
+def paintColormapIcons():
+    N = 20
+    a = numpy.outer(numpy.ones(shape=(N,)),numpy.linspace(0.,1.,N))
+    maps=[m for m in cm.datad if not m.endswith("_r")]
+    mappable = cm.ScalarMappable()
+    mappable.set_norm(colors.Normalize())
+    iconDict = {}
+    for m in maps:
+        mappable.set_cmap(m)
+        a_rgb = mappable.to_rgba(a,None,True)[:,:,:]
+        img = QtGui.QImage(N,N, QtGui.QImage.Format_RGB32)
+        for x in xrange(N):
+            for y in xrange(N):
+                img.setPixel(x, y, QtGui.QColor(a_rgb[y,x,0],a_rgb[y,x,1],a_rgb[y,x,2]).rgb())       
+        icon = QtGui.QIcon(QtGui.QPixmap.fromImage(img))
+        iconDict[m] = icon
+    return iconDict
+
+        
+

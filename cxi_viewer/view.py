@@ -19,30 +19,42 @@ class ImageLoader(QtCore.QObject):
         self.setNorm()
         self.setColormap()
     @QtCore.Slot(int,int)
+    def update(self,init=False):
+        if self.view.parent.datasetProp.displayLin.isChecked(): self.setNorm('lin')
+        elif self.view.parent.datasetProp.displayLog.isChecked(): self.setNorm('log')
+        elif self.view.parent.datasetProp.displayPow.isChecked(): self.setNorm('pow')
+        self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
     def loadImage(self,img):
         if(img in self.loaded):
-            return
+           return
+        self.update()
         self.loaded[img] = True
         data = self.view.data[img,:]
-        offset = float(numpy.min(data));
+        offset = float(numpy.min(data))
         scale = float(numpy.max(data)-offset)
         if(scale == 0):
             scale = 1
         self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
-        gamma = self.view.parent.datasetProp.displayGamma.value();
+        if self.gamma != 1:
+            data = numpy.array(data**self.gamma,dtype='int16')
         if(self.view.parent.datasetProp.imageStackBox.isVisible() and
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        self.imageData[img][:,:,:] = self.mappable.to_rgba(data**gamma,None,True)[:,:,:3]
+        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:3]
         self.imageLoaded.emit(img)
-    def setColormap(self,name="jet"):
+    def setColormap(self,name='jet'):
         self.mappable.set_cmap(name)
-    def setNorm(self,name="lin",vmin=None,vmax=None):
-        if name == "lin":
+    def setNorm(self,name='log',vmin=None,vmax=None):
+        if name == 'lin':
             norm = colors.Normalize(vmin,vmax)
-        elif name == "log":
+            self.gamma = 1
+        elif name == 'pow':
+            norm = colors.Normalize(vmin,vmax)
+            self.gamma = self.view.parent.datasetProp.displayGamma.value()
+        elif name == 'log':
             norm = colors.LogNorm(vmin,vmax)
+            self.gamma = 1
         self.mappable.set_norm(norm)
     def clear(self):
         self.imageData = {}
@@ -528,6 +540,7 @@ class View(QtOpenGL.QGLWidget):
     def clearTextures(self):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
+        self.loaderThread.clear()
     def setStackWidth(self,width):
         self.stackWidth = width
         if(self.has_data is not True):

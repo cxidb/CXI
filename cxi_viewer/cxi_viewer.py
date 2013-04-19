@@ -34,8 +34,9 @@ class Viewer(QtGui.QMainWindow):
         self.statusBar.showMessage("Initializing...")
         self.splitter = QtGui.QSplitter(self)
         self.view = View(self)
-        self.CXITree = CXITree(self)
         self.datasetProp = DatasetProp(self)
+        self.CXITree = CXITree(self)
+
 #        self.datasetProp.hide()                
         self.splitter.addWidget(self.CXITree)
         self.splitter.addWidget(self.view)
