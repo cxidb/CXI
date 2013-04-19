@@ -58,12 +58,26 @@ class DatasetProp(QtGui.QWidget):
         self.displayBox = QtGui.QGroupBox("Display Properties");
         self.displayBox.vbox = QtGui.QVBoxLayout()
         self.displayBox.setLayout(self.displayBox.vbox)
+        vbox = QtGui.QVBoxLayout()
+        vbox.addWidget(QtGui.QLabel("Scaling:"))
+        self.displayLin = QtGui.QRadioButton("Linear")
+        self.displayLin.toggled.connect(self.displayScalingChanged)
+        self.displayLog = QtGui.QRadioButton("Logarithmic")
+        self.displayLog.toggled.connect(self.displayScalingChanged)
+        self.displayPow = QtGui.QRadioButton("Power")
+        self.displayPow.toggled.connect(self.displayScalingChanged)
+        self.displayLog.setChecked(True)
+        vbox.addWidget(self.displayLin)
+        vbox.addWidget(self.displayLog)
+        vbox.addWidget(self.displayPow)
+        self.displayBox.vbox.addLayout(vbox)
+        
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Gamma:"))
         self.displayGamma = QtGui.QDoubleSpinBox(parent=self)
         self.displayGamma.setValue(0.25);
         self.displayGamma.setSingleStep(0.25);
-        self.displayGamma.valueChanged.connect(self.displayGammaChanged)
+        self.displayGamma.valueChanged.connect(self.displayScalingChanged)
         hbox.addWidget(self.displayGamma)
         self.displayBox.vbox.addLayout(hbox)
 
@@ -136,6 +150,6 @@ class DatasetProp(QtGui.QWidget):
             self.imageStackGlobalScale.maximum = numpy.max(self.data)
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
-    def displayGammaChanged(self,value):
+    def displayScalingChanged(self,value):
         self.parent.view.clearTextures()
         self.parent.view.updateGL()

@@ -4,6 +4,9 @@ from OpenGL.GLU import *
 from PySide import QtGui, QtCore, QtOpenGL
 import numpy
 import math
+from matplotlib import colors
+from matplotlib import cm
+
 
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
@@ -12,6 +15,9 @@ class ImageLoader(QtCore.QObject):
         self.view = view
         self.imageData = {}
         self.loaded = {}
+        self.mappable = cm.ScalarMappable()
+        self.setNorm()
+        self.setColormap()
     @QtCore.Slot(int,int)
     def loadImage(self,img):
         if(img in self.loaded):
@@ -28,10 +34,16 @@ class ImageLoader(QtCore.QObject):
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        self.imageData[img][:,:,0] = 255*((data-offset)/scale)**(gamma)
-        self.imageData[img][:,:,1] = 255*((data-offset)/scale)**(gamma)
-        self.imageData[img][:,:,2] = 255*((data-offset)/scale)**(gamma)
+        self.imageData[img][:,:,:] = self.mappable.to_rgba(data**gamma,None,True)[:,:,:3]
         self.imageLoaded.emit(img)
+    def setColormap(self,name="jet"):
+        self.mappable.set_cmap(name)
+    def setNorm(self,name="lin",vmin=None,vmax=None):
+        if name == "lin":
+            norm = colors.Normalize(vmin,vmax)
+        elif name == "log":
+            norm = colors.LogNorm(vmin,vmax)
+        self.mappable.set_norm(norm)
     def clear(self):
         self.imageData = {}
         self.loaded = {}
