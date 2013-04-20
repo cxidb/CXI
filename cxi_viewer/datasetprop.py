@@ -105,10 +105,13 @@ class DatasetProp(QtGui.QWidget):
         vbox.addLayout(hbox)
         self.displayBox.vbox.addLayout(vbox)
         
-        colormapIcons = paintColormapIcons()
+        icon_width = 256/2
+        icon_height = 10
+        colormapIcons = paintColormapIcons(icon_width,icon_height)
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Colormap:"))
         self.displayColormap = QtGui.QComboBox(parent=self)
+        self.displayColormap.setIconSize(QtCore.QSize(icon_width,icon_height))
         self.displayColormap.addItem(colormapIcons.pop('jet'),'jet')
         self.displayColormap.addItem(colormapIcons.pop('hot'),'hot')        
         self.displayColormap.addItem(colormapIcons.pop('gray'),'gray')        
@@ -120,8 +123,19 @@ class DatasetProp(QtGui.QWidget):
 
         self.displayBox.setLayout(self.displayBox.vbox)
 
-        self.maskPixBox = QtGui.QGroupBox("Masking out pixels");
-        self.maskPixBox.vbox = QtGui.QVBoxLayout()
+        self.maskBox = QtGui.QGroupBox("Mask out pixels");
+        self.maskBox.vbox = QtGui.QVBoxLayout()
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Pixelmask:"))
+        self.maskPixelmask = QtGui.QComboBox(parent=self)
+        self.maskPixelmask.addItem("None")
+        self.maskPixelmask.addItem("Shared")
+        self.maskPixelmask.addItem("Unshared")
+        self.maskPixelmaskUpdateEntries()
+        self.maskPixelmask.currentIndexChanged.connect(self.maskChanged)
+        hbox.addWidget(self.maskPixelmask)
+        self.maskBox.vbox.addLayout(hbox)
 
         vbox = QtGui.QVBoxLayout()
         self.maskInvalidPix = QtGui.QCheckBox("Invalid",parent=self)
@@ -146,9 +160,9 @@ class DatasetProp(QtGui.QWidget):
         vbox.addWidget(self.maskResolutionPix)
         vbox.addWidget(self.maskMissingPix)
         vbox.addWidget(self.maskHaloPix)
-        self.maskPixBox.vbox.addLayout(vbox)
+        self.maskBox.vbox.addLayout(vbox)
 
-        self.maskPixBox.setLayout(self.maskPixBox.vbox)
+        self.maskBox.setLayout(self.maskBox.vbox)
 
         self.imageBox = QtGui.QGroupBox("Image Properties");
         self.imageBox.vbox = QtGui.QVBoxLayout()
@@ -178,10 +192,11 @@ class DatasetProp(QtGui.QWidget):
         self.vbox.addWidget(self.imageStackBox)
         self.vbox.addWidget(self.imageBox)
         self.vbox.addWidget(self.displayBox)
-        self.vbox.addWidget(self.maskPixBox)
+        self.vbox.addWidget(self.maskBox)
         self.vbox.addStretch()
         self.setLayout(self.vbox)
         self.plots = 1
+
     def setDataset(self,data):
         self.imageStackGlobalScale.minimum = None
         self.imageStackGlobalScale.maximum = None
@@ -225,10 +240,23 @@ class DatasetProp(QtGui.QWidget):
     def displayChanged(self,value):
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
+        
+    def maskPixelmaskUpdateEntries(self):
+        maxentries = 1
+        if hasattr(self.parent,'CXITree'):
+            if self.parent.CXITree.currGroupName != None:
+                datasets = self.parent.f[self.parent.cxitree.currGroupName].keys()
+                if 'mask_shared' in datasets:
+                    maxentries += 1
+                    if 'mask' in datasets:
+                        maxentries += 1  
+        self.maskPixelmask.setMaxVisibleItems(maxentries)
 
-def paintColormapIcons():
-    N = 20
-    a = numpy.outer(numpy.ones(shape=(N,)),numpy.linspace(0.,1.,N))
+    def maskChanged(self,value):
+        pass
+
+def paintColormapIcons(W,H):
+    a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
     maps=[m for m in cm.datad if not m.endswith("_r")]
     mappable = cm.ScalarMappable()
     mappable.set_norm(colors.Normalize())
@@ -236,9 +264,9 @@ def paintColormapIcons():
     for m in maps:
         mappable.set_cmap(m)
         a_rgb = mappable.to_rgba(a,None,True)[:,:,:]
-        img = QtGui.QImage(N,N, QtGui.QImage.Format_RGB32)
-        for x in xrange(N):
-            for y in xrange(N):
+        img = QtGui.QImage(W,H, QtGui.QImage.Format_RGB32)
+        for x in xrange(W):
+            for y in xrange(H):
                 img.setPixel(x, y, QtGui.QColor(a_rgb[y,x,0],a_rgb[y,x,1],a_rgb[y,x,2]).rgb())       
         icon = QtGui.QIcon(QtGui.QPixmap.fromImage(img))
         iconDict[m] = icon

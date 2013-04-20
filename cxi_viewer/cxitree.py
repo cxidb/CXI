@@ -12,9 +12,12 @@ class CXITree(QtGui.QTreeWidget):
         self.itemExpanded.connect(self.treeChanged)
         self.itemCollapsed.connect(self.treeChanged)
         self.resizeColumnToContents(0)
+        self.currDatasetName = self.currGroupName = None
     def handleClick(self,item,column):
         if(item.text(column) == "Click to display"):
-            data = self.datasets[str(item.text(2))]
+            self.currDatasetName = str(item.text(2))
+            self.currGroupName = str(item.text(2).rsplit("/",1)[0])
+            data = self.datasets[self.currDatasetName]
             if(numpy.iscomplexobj(data[0])):
                 data = numpy.abs(data)
             if(len(data.shape) == 1):
@@ -69,20 +72,20 @@ class CXITree(QtGui.QTreeWidget):
         self.parent.datasetProp.clearDataset()
         self.loadData1()
     def buildBranch(self,group,item):        
-            for g in group.keys():
-                lst = [g]
-                if(isinstance(group[g],h5py.Group)):
-                    child = QtGui.QTreeWidgetItem(lst)
-                    self.buildBranch(group[g],child)
-                    item.addChild(child)                                    
+        for g in group.keys():
+            lst = [g]
+            if(isinstance(group[g],h5py.Group)):
+                child = QtGui.QTreeWidgetItem(lst)
+                self.buildBranch(group[g],child)
+                item.addChild(child)                                    
+            else:
+                if(not group[g].shape or reduce(mul,group[g].shape) < 10):
+                    lst.append(str(group[g][()]))
                 else:
-                    if(not group[g].shape or reduce(mul,group[g].shape) < 10):
-                        lst.append(str(group[g][()]))
-                    else:
-                        lst.append("Click to display")
-                        lst.append(group[g].name)
-                        self.datasets[group[g].name] = group[g]
-                    item.addChild(QtGui.QTreeWidgetItem(lst))
+                    lst.append("Click to display")
+                    lst.append(group[g].name)
+                    self.datasets[group[g].name] = group[g]
+                item.addChild(QtGui.QTreeWidgetItem(lst))
     def loadData1(self):
         root = self.topLevelItem(0)
         root.setExpanded(True)
