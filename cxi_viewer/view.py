@@ -34,18 +34,27 @@ class ImageLoader(QtCore.QObject):
         scale = float(numpy.max(data)-offset)
         if(scale == 0):
             scale = 1
-        self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
+        self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],4),dtype=numpy.uint8)
         if self.gamma != 1:
             data = numpy.array(data**self.gamma,dtype='int16')
         if(self.view.parent.datasetProp.imageStackBox.isVisible() and
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
+        if self.normName == 'log' or self.normName == 'pow':
+            data[data<=self.mappable.get_clim()[0]] = self.mappable.get_clim()[0]
+        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if self.view.mask != None and not self.maskOutBits == 0:
-            mask = self.view.mask[img,:]
-            data[(mask & self.maskOutBits) != 0] = 0
-        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:3]
+            mask = self.getMask(img)
+            self.imageData[img][:,:,3] = 255*((mask & self.maskOutBits) == 0)
         self.imageLoaded.emit(img)
+    def getMask(self,img):
+        if self.pixelmaskText == 'none':
+            return None
+        elif self.pixelmaskText == 'mask_shared':
+            return self.view.mask[:]
+        elif self.pixelmaskText == 'mask':
+            return self.view.mask[img,:]
     def setColormap(self,name='jet'):
         self.mappable.set_cmap(name)
     def setNorm(self,name='log',vmin=1.,vmax=10000.):
@@ -58,6 +67,7 @@ class ImageLoader(QtCore.QObject):
         elif name == 'log':
             norm = colors.LogNorm()
             self.gamma = 1
+        self.normName = name
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
     def setPixelmask(self,pixelmaskText="none"):
@@ -421,11 +431,13 @@ class View(QtOpenGL.QGLWidget):
     @QtCore.Slot(int)
     def generateTexture(self,img):
         texture = glGenTextures(1)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glBindTexture(GL_TEXTURE_2D, texture)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.loaderThread.imageData[img].shape[1], self.loaderThread.imageData[img].shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, self.loaderThread.imageData[img]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self.loaderThread.imageData[img].shape[1], self.loaderThread.imageData[img].shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, self.loaderThread.imageData[img]);
         self.textureIds[img] = texture
         self.updateGL()
     def updateTextures(self,images):
