@@ -42,7 +42,7 @@ class ImageLoader(QtCore.QObject):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
         if self.normName == 'log' or self.normName == 'pow':
-            data[data<=self.mappable.get_clim()[0]] = self.mappable.get_clim()[0]
+            data[data<self.mappable.get_clim()[0]] = self.mappable.get_clim()[0]
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if self.view.mask != None and not self.maskOutBits == 0:
             mask = self.getMask(img)
@@ -86,12 +86,16 @@ class ImageLoader(QtCore.QObject):
             vmax = self.view.parent.datasetProp.displayMax.value()
             if vmin >= vmax:
                 vmin = vmax - 1000.
+                self.view.parent.datasetProp.displayMin.setValue(vmin)
             if self.view.parent.datasetProp.displayLin.isChecked():
                 self.setNorm('lin',vmin,vmax)
             elif self.view.parent.datasetProp.displayLog.isChecked():
-                if vmin <= 0. or vmax <= 0.:
+                if vmin <= 0.:
                     vmin = 1.
-                    vmax = 10000.
+                    self.view.parent.datasetProp.displayMin.setValue(vmin)
+                if vmax <= 0.:
+                    vmax = vmin+10000.
+                    self.view.parent.datasetProp.displayMax.setValue(vmax)
                 self.setNorm('log',vmin,vmax)
             elif self.view.parent.datasetProp.displayPow.isChecked():
                 self.setNorm('pow',vmin,vmax)
