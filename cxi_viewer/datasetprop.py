@@ -160,7 +160,7 @@ class DatasetProp(QtGui.QWidget):
                            'halo' : maskHaloPix}
         for maskKey in self.masksBoxes:
             self.masksBoxes[maskKey].stateChanged.connect(self.maskChanged)
-            vbox.addWidget(self.masksBoxes)
+            vbox.addWidget(self.masksBoxes[maskKey])
         self.maskBox.vbox.addLayout(vbox)
 
         self.maskBox.setLayout(self.maskBox.vbox)
@@ -241,28 +241,20 @@ class DatasetProp(QtGui.QWidget):
     def displayChanged(self,value):
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
+
+    def maskChanged(self,value):
+        self.displayChanged(value)
         
     def maskPixelmaskRefreshItems(self):
         self.maskPixelmask.clear()
-        self.maskPixelmask.addItem("None")
+        self.maskPixelmask.addItem("none")
         if hasattr(self.parent,'CXITree'):
             if self.parent.CXITree.currGroupName != None:
                 datasets = self.parent.CXITree.f[self.parent.CXITree.currGroupName].keys()
                 if 'mask_shared' in datasets:
-                    self.maskPixelmask.addItem("Shared")
+                    self.maskPixelmask.addItem("mask_shared")
                     if 'mask' in datasets:
-                        self.maskPixelmask.addItem("Unshared")
-
-    def maskChanged(self,value):
-        self.maskOutBits = 0
-        for maskKey in self.masksBoxes:
-            if self.masksBoxes[maskKey].isChecked():
-                self.maskOutBits |= PIXELMASK_BITS[maskKey]
-        if self.maskPixelmask.currentText() != self.maskLoaded: 
-            
-        
-        
-            
+                        self.maskPixelmask.addItem("mask")
 
     def clear(self):
         self.maskPixelmaskRefreshItems()
@@ -284,28 +276,3 @@ def paintColormapIcons(W,H):
         iconDict[m] = icon
     return iconDict
 
-PIXEL_IS_PERFECT = 0
-PIXEL_IS_INVALID = 1
-PIXEL_IS_SATURATED = 2
-PIXEL_IS_HOT = 4
-PIXEL_IS_DEAD = 8
-PIXEL_IS_SHADOWED = 16
-PIXEL_IS_IN_PEAKMASK = 32
-PIXEL_IS_TO_BE_IGNORED = 64
-PIXEL_IS_BAD = 128
-PIXEL_IS_OUT_OF_RESOLUTION_LIMITS = 256
-PIXEL_IS_MISSING = 512
-PIXEL_IS_IN_HALO = 1024
-
-PIXELMASK_BITS = {'perfect' : PIXEL_IS_PERFECT,
-                  'invalid' : PIXEL_IS_INVALID,
-                  'saturated' : PIXEL_IS_SATURATED,
-                  'hot' : PIXEL_IS_HOT,
-                  'dead' : PIXEL_IS_DEAD,
-                  'shadowed' : PIXEL_IS_SHADOWED,
-                  'peakmask' : PIXEL_IS_IN_PEAKMASK,
-                  'ignore' : PIXEL_IS_TO_BE_IGNORED,
-                  'bad' : PIXEL_IS_BAD,
-                  'resolution' : PIXEL_IS_OUT_OF_RESOLUTION_LIMITS,
-                  'missing' : PIXEL_IS_MISSING,
-                  'halo' : PIXEL_IS_IN_HALO}
