@@ -18,18 +18,31 @@ class ImageLoader(QtCore.QObject):
         self.mappable = cm.ScalarMappable()
         self.setNorm()
         self.setColormap()
+        self.initialLoad = True
     @QtCore.Slot(int,int)
-    def update(self,init=False):
+    def update(self):
         if hasattr(self.view.parent,'datasetProp'):
-            if self.view.parent.datasetProp.displayLin.isChecked(): self.setNorm('lin')
-            elif self.view.parent.datasetProp.displayLog.isChecked(): self.setNorm('log')
-            elif self.view.parent.datasetProp.displayPow.isChecked(): self.setNorm('pow')
+            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
             vmin = self.view.parent.datasetProp.displayMin.value()
             vmax = self.view.parent.datasetProp.displayMax.value()
-            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText(),vmin,vmax)
+            if vmin >= vmax:
+                vmin = vmax - 1000.
+            if self.view.parent.datasetProp.displayLin.isChecked():
+                self.setNorm('lin',vmin,vmax)
+            elif self.view.parent.datasetProp.displayLog.isChecked():
+                if vmin <= 0. or vmax <= 0.:
+                    vmin = 1.
+                    vmax = 10000.
+                self.setNorm('log',vmin,vmax)
+            elif self.view.parent.datasetProp.displayPow.isChecked():
+                self.setNorm('pow',vmin,vmax)
+            else: print "ERROR: No Scaling chosen."
     def loadImage(self,img):
         if(img in self.loaded):
            return
+        if self.initialLoad:
+            self.update()
+            self.initialLoad = False
         self.loaded[img] = True
         data = self.view.data[img,:]
         offset = float(numpy.min(data))
@@ -47,17 +60,18 @@ class ImageLoader(QtCore.QObject):
         self.imageLoaded.emit(img)
     def setColormap(self,name='jet'):
         self.mappable.set_cmap(name)
-    def setNorm(self,name='log',vmin=0.,vmax=10000.):
+    def setNorm(self,name='log',vmin=1.,vmax=10000.):
         if name == 'lin':
-            norm = colors.Normalize(vmin,vmax)
+            norm = colors.Normalize()
             self.gamma = 1
         elif name == 'pow':
-            norm = colors.Normalize(vmin,vmax)
+            norm = colors.Normalize()
             self.gamma = self.view.parent.datasetProp.displayGamma.value()
         elif name == 'log':
-            norm = colors.LogNorm(vmin,vmax)
+            norm = colors.LogNorm()
             self.gamma = 1
         self.mappable.set_norm(norm)
+        self.mappable.set_clim(vmin,vmax)
     def clear(self):
         self.imageData = {}
         self.loaded = {}
@@ -543,6 +557,7 @@ class View(QtOpenGL.QGLWidget):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
         self.loaderThread.clear()
+        self.loaderThread.update()
     def setStackWidth(self,width):
         self.stackWidth = width
         if(self.has_data is not True):
