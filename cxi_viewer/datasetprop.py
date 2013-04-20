@@ -133,30 +133,34 @@ class DatasetProp(QtGui.QWidget):
         self.maskPixelmask.currentIndexChanged.connect(self.maskChanged)
         hbox.addWidget(self.maskPixelmask)
         self.maskBox.vbox.addLayout(hbox)
+        self.maskLoaded = "None"
 
         vbox = QtGui.QVBoxLayout()
-        self.maskInvalidPix = QtGui.QCheckBox("Invalid",parent=self)
-        self.maskSaturatedPix = QtGui.QCheckBox("Saturated",parent=self)
-        self.maskHotPix = QtGui.QCheckBox("Hot",parent=self)
-        self.maskDeadPix = QtGui.QCheckBox("Dead",parent=self)
-        self.maskShadowedPix = QtGui.QCheckBox("Shadowed",parent=self)
-        self.maskPeakmaskPix = QtGui.QCheckBox("In peakmask",parent=self)
-        self.maskIgnorePix = QtGui.QCheckBox("To be ignored",parent=self)
-        self.maskBadPix = QtGui.QCheckBox("Bad",parent=self)
-        self.maskResolutionPix = QtGui.QCheckBox("Out of resolution limits",parent=self)
-        self.maskMissingPix = QtGui.QCheckBox("Missing",parent=self)
-        self.maskHaloPix = QtGui.QCheckBox("In Halo",parent=self)
-        vbox.addWidget(self.maskInvalidPix)
-        vbox.addWidget(self.maskSaturatedPix)
-        vbox.addWidget(self.maskHotPix)
-        vbox.addWidget(self.maskDeadPix)
-        vbox.addWidget(self.maskShadowedPix)
-        vbox.addWidget(self.maskPeakmaskPix)
-        vbox.addWidget(self.maskIgnorePix)
-        vbox.addWidget(self.maskBadPix)
-        vbox.addWidget(self.maskResolutionPix)
-        vbox.addWidget(self.maskMissingPix)
-        vbox.addWidget(self.maskHaloPix)
+        maskInvalidPix = QtGui.QCheckBox("Invalid",parent=self)    
+        maskSaturatedPix = QtGui.QCheckBox("Saturated",parent=self)
+        maskHotPix = QtGui.QCheckBox("Hot",parent=self)
+        maskDeadPix = QtGui.QCheckBox("Dead",parent=self)
+        maskShadowedPix = QtGui.QCheckBox("Shadowed",parent=self)
+        maskPeakmaskPix = QtGui.QCheckBox("In peakmask",parent=self)
+        maskIgnorePix = QtGui.QCheckBox("To be ignored",parent=self)
+        maskBadPix = QtGui.QCheckBox("Bad",parent=self)
+        maskResolutionPix = QtGui.QCheckBox("Out of resolution limits",parent=self)
+        maskMissingPix = QtGui.QCheckBox("Missing",parent=self)
+        maskHaloPix = QtGui.QCheckBox("In Halo",parent=self)
+        self.masksBoxes = {'invalid' : maskInvalidPix,
+                           'saturated' : maskSaturatedPix,
+                           'hot' : maskHotPix,
+                           'dead' : maskDeadPix,
+                           'shadowed' : maskShadowedPix,
+                           'peakmask' : maskPeakmaskPix,
+                           'ignore' : maskIgnorePix,
+                           'bad' : maskBadPix,
+                           'resolution' : maskResolutionPix,
+                           'missing' : maskMissingPix,
+                           'halo' : maskHaloPix}
+        for maskKey in self.masksBoxes:
+            self.masksBoxes[maskKey].stateChanged.connect(self.maskChanged)
+            vbox.addWidget(self.masksBoxes)
         self.maskBox.vbox.addLayout(vbox)
 
         self.maskBox.setLayout(self.maskBox.vbox)
@@ -250,7 +254,15 @@ class DatasetProp(QtGui.QWidget):
                         self.maskPixelmask.addItem("Unshared")
 
     def maskChanged(self,value):
-        pass
+        self.maskOutBits = 0
+        for maskKey in self.masksBoxes:
+            if self.masksBoxes[maskKey].isChecked():
+                self.maskOutBits |= PIXELMASK_BITS[maskKey]
+        if self.maskPixelmask.currentText() != self.maskLoaded: 
+            
+        
+        
+            
 
     def clear(self):
         self.maskPixelmaskRefreshItems()
@@ -272,5 +284,28 @@ def paintColormapIcons(W,H):
         iconDict[m] = icon
     return iconDict
 
-        
+PIXEL_IS_PERFECT = 0
+PIXEL_IS_INVALID = 1
+PIXEL_IS_SATURATED = 2
+PIXEL_IS_HOT = 4
+PIXEL_IS_DEAD = 8
+PIXEL_IS_SHADOWED = 16
+PIXEL_IS_IN_PEAKMASK = 32
+PIXEL_IS_TO_BE_IGNORED = 64
+PIXEL_IS_BAD = 128
+PIXEL_IS_OUT_OF_RESOLUTION_LIMITS = 256
+PIXEL_IS_MISSING = 512
+PIXEL_IS_IN_HALO = 1024
 
+PIXELMASK_BITS = {'perfect' : PIXEL_IS_PERFECT,
+                  'invalid' : PIXEL_IS_INVALID,
+                  'saturated' : PIXEL_IS_SATURATED,
+                  'hot' : PIXEL_IS_HOT,
+                  'dead' : PIXEL_IS_DEAD,
+                  'shadowed' : PIXEL_IS_SHADOWED,
+                  'peakmask' : PIXEL_IS_IN_PEAKMASK,
+                  'ignore' : PIXEL_IS_TO_BE_IGNORED,
+                  'bad' : PIXEL_IS_BAD,
+                  'resolution' : PIXEL_IS_OUT_OF_RESOLUTION_LIMITS,
+                  'missing' : PIXEL_IS_MISSING,
+                  'halo' : PIXEL_IS_IN_HALO}

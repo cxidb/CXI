@@ -18,11 +18,16 @@ class ImageLoader(QtCore.QObject):
         self.mappable = cm.ScalarMappable()
         self.setNorm()
         self.setColormap()
+        self.setPixelmask()
+        self.maskOutBits()
+        self.initialLoad = True
     @QtCore.Slot(int,int)
     def loadImage(self,img):
         if(img in self.loaded):
            return
-        self.update()
+        if self.initialLoad:
+            self.update()
+            self.intialLoad = False
         self.loaded[img] = True
         data = self.view.data[img,:]
         offset = float(numpy.min(data))
@@ -36,6 +41,9 @@ class ImageLoader(QtCore.QObject):
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
+        if self.view.mask != None and not self.maskOutBits == 0:
+            print data.dtype
+            data[(self.view.mask & self.maskOutBits) != 0] = numpy.nan
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:3]
         self.imageLoaded.emit(img)
     def setColormap(self,name='jet'):
@@ -52,26 +60,43 @@ class ImageLoader(QtCore.QObject):
             self.gamma = 1
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
+    def setPixelmask(self,pixelmaskText="none"):
+        if hasattr(self,'pixelmaskText'):
+            if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
+                self.view.mask = self.view.parent.CXITree.f[self.currGroupName+'/'+pixelmaskText]
+            else:
+                self.view.mask = None
+        self.pixelmaskText = pixelmaskText
+    def setMaskOutBits(self,value=0):
+        self.maskOutBits = value
     def update(self):
-        if hasattr(self.view.parent,'datasetProp'):
-            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
-            vmin = self.view.parent.datasetProp.displayMin.value()
-            vmax = self.view.parent.datasetProp.displayMax.value()
-            if vmin >= vmax:
-                vmin = vmax - 1000.
-            if self.view.parent.datasetProp.displayLin.isChecked():
-                self.setNorm('lin',vmin,vmax)
-            elif self.view.parent.datasetProp.displayLog.isChecked():
-                if vmin <= 0. or vmax <= 0.:
-                    vmin = 1.
-                    vmax = 10000.
-                self.setNorm('log',vmin,vmax)
-            elif self.view.parent.datasetProp.displayPow.isChecked():
-                self.setNorm('pow',vmin,vmax)
-            else: print "ERROR: No Scaling chosen."
+        #if hasattr(self.view.parent,'datasetProp'):
+        self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
+        vmin = self.view.parent.datasetProp.displayMin.value()
+        vmax = self.view.parent.datasetProp.displayMax.value()
+        if vmin >= vmax:
+            vmin = vmax - 1000.
+        if self.view.parent.datasetProp.displayLin.isChecked():
+            self.setNorm('lin',vmin,vmax)
+        elif self.view.parent.datasetProp.displayLog.isChecked():
+            if vmin <= 0. or vmax <= 0.:
+                vmin = 1.
+                vmax = 10000.
+            self.setNorm('log',vmin,vmax)
+        elif self.view.parent.datasetProp.displayPow.isChecked():
+            self.setNorm('pow',vmin,vmax)
+        else: print "ERROR: No Scaling chosen."
+        setPixelmap(self.view.parent.datasetProp.maskPixelmask.currentText())
+        maskOutBits = 0
+        maskBoxes = self.view.parent.datasetProp.masksBoxes
+        for maskKey in self.masksBoxes:
+            if masksBoxes[maskKey].isChecked():
+                maskOutBits |= PIXELMASK_BITS[maskKey]
+        self.setMaskOutBits(maskOutBits)
     def clear(self):
         self.imageData = {}
         self.loaded = {}
+        self.intialLoad = True
 
 class View(QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int) 
