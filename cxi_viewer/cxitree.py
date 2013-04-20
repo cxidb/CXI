@@ -26,12 +26,15 @@ class CXITree(QtGui.QTreeWidget):
             elif(len(data.shape) == 2): 
 #                self.parent.view.imshow(data)
                 data.form = '2D Image'
+                self.parent.datasetProp.clear()
+                self.parent.view.clear()
                 self.parent.view.loadImage(data)
                 print str(item.text(2))
                 self.parent.statusBar.showMessage("Loaded %s" % (str(item.text(2))),1000)
             elif(len(data.shape) == 3):
                 # Check for the axis attribute
                 if('axes' in self.datasets[str(item.text(2))].attrs.keys() is not None):
+                    self.parent.datasetProp.clear()
                     self.parent.view.clear()
                     self.parent.view.loadStack(data)
                     self.parent.statusBar.showMessage("Loaded slice 0",1000)

@@ -243,7 +243,7 @@ class DatasetProp(QtGui.QWidget):
         self.maskPixelmask.addItem("None")
         if hasattr(self.parent,'CXITree'):
             if self.parent.CXITree.currGroupName != None:
-                datasets = self.parent.f[self.parent.cxitree.currGroupName].keys()
+                datasets = self.parent.CXITree.f[self.parent.CXITree.currGroupName].keys()
                 if 'mask_shared' in datasets:
                     self.maskPixelmask.addItem("Shared")
                     if 'mask' in datasets:
@@ -251,6 +251,9 @@ class DatasetProp(QtGui.QWidget):
 
     def maskChanged(self,value):
         pass
+
+    def clear(self):
+        self.maskPixelmaskRefreshItems()
 
 def paintColormapIcons(W,H):
     a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
