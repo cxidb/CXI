@@ -18,31 +18,11 @@ class ImageLoader(QtCore.QObject):
         self.mappable = cm.ScalarMappable()
         self.setNorm()
         self.setColormap()
-        self.initialLoad = True
     @QtCore.Slot(int,int)
-    def update(self):
-        if hasattr(self.view.parent,'datasetProp'):
-            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
-            vmin = self.view.parent.datasetProp.displayMin.value()
-            vmax = self.view.parent.datasetProp.displayMax.value()
-            if vmin >= vmax:
-                vmin = vmax - 1000.
-            if self.view.parent.datasetProp.displayLin.isChecked():
-                self.setNorm('lin',vmin,vmax)
-            elif self.view.parent.datasetProp.displayLog.isChecked():
-                if vmin <= 0. or vmax <= 0.:
-                    vmin = 1.
-                    vmax = 10000.
-                self.setNorm('log',vmin,vmax)
-            elif self.view.parent.datasetProp.displayPow.isChecked():
-                self.setNorm('pow',vmin,vmax)
-            else: print "ERROR: No Scaling chosen."
     def loadImage(self,img):
         if(img in self.loaded):
            return
-        if self.initialLoad:
-            self.update()
-            self.initialLoad = False
+        self.update()
         self.loaded[img] = True
         data = self.view.data[img,:]
         offset = float(numpy.min(data))
@@ -72,6 +52,23 @@ class ImageLoader(QtCore.QObject):
             self.gamma = 1
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
+    def update(self):
+        if hasattr(self.view.parent,'datasetProp'):
+            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
+            vmin = self.view.parent.datasetProp.displayMin.value()
+            vmax = self.view.parent.datasetProp.displayMax.value()
+            if vmin >= vmax:
+                vmin = vmax - 1000.
+            if self.view.parent.datasetProp.displayLin.isChecked():
+                self.setNorm('lin',vmin,vmax)
+            elif self.view.parent.datasetProp.displayLog.isChecked():
+                if vmin <= 0. or vmax <= 0.:
+                    vmin = 1.
+                    vmax = 10000.
+                self.setNorm('log',vmin,vmax)
+            elif self.view.parent.datasetProp.displayPow.isChecked():
+                self.setNorm('pow',vmin,vmax)
+            else: print "ERROR: No Scaling chosen."
     def clear(self):
         self.imageData = {}
         self.loaded = {}

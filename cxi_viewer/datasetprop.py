@@ -129,10 +129,7 @@ class DatasetProp(QtGui.QWidget):
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Pixelmask:"))
         self.maskPixelmask = QtGui.QComboBox(parent=self)
-        self.maskPixelmask.addItem("None")
-        self.maskPixelmask.addItem("Shared")
-        self.maskPixelmask.addItem("Unshared")
-        self.maskPixelmaskUpdateEntries()
+        self.maskPixelmaskRefreshItems()
         self.maskPixelmask.currentIndexChanged.connect(self.maskChanged)
         hbox.addWidget(self.maskPixelmask)
         self.maskBox.vbox.addLayout(hbox)
@@ -241,16 +238,16 @@ class DatasetProp(QtGui.QWidget):
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
         
-    def maskPixelmaskUpdateEntries(self):
-        maxentries = 1
+    def maskPixelmaskRefreshItems(self):
+        self.maskPixelmask.clear()
+        self.maskPixelmask.addItem("None")
         if hasattr(self.parent,'CXITree'):
             if self.parent.CXITree.currGroupName != None:
                 datasets = self.parent.f[self.parent.cxitree.currGroupName].keys()
                 if 'mask_shared' in datasets:
-                    maxentries += 1
+                    self.maskPixelmask.addItem("Shared")
                     if 'mask' in datasets:
-                        maxentries += 1  
-        self.maskPixelmask.setMaxVisibleItems(maxentries)
+                        self.maskPixelmask.addItem("Unshared")
 
     def maskChanged(self,value):
         pass
