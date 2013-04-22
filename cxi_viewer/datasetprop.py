@@ -267,11 +267,13 @@ def paintColormapIcons(W,H):
     iconDict = {}
     for m in maps:
         mappable.set_cmap(m)
-        a_rgb = mappable.to_rgba(a,None,True)[:,:,:]
-        img = QtGui.QImage(W,H, QtGui.QImage.Format_RGB32)
-        for x in xrange(W):
-            for y in xrange(H):
-                img.setPixel(x, y, QtGui.QColor(a_rgb[y,x,0],a_rgb[y,x,1],a_rgb[y,x,2]).rgb())       
+        temp = mappable.to_rgba(a,None,True)[:,:,:]
+        a_rgb = numpy.zeros(shape=(H,W,4),dtype=numpy.uint8)
+        # For some reason we have to swap indices !? Otherwise inverted colors...
+        a_rgb[:,:,2] = temp[:,:,0]
+        a_rgb[:,:,1] = temp[:,:,1]
+        a_rgb[:,:,0] = temp[:,:,2]
+        img = QtGui.QImage(a_rgb,W,H,QtGui.QImage.Format_RGB32)
         icon = QtGui.QIcon(QtGui.QPixmap.fromImage(img))
         iconDict[m] = icon
     return iconDict
