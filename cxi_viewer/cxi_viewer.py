@@ -36,10 +36,25 @@ class Viewer(QtGui.QMainWindow):
         self.splitter = QtGui.QSplitter(self)
         self.view = View(self)
         self.datasetProp = DatasetProp(self)
-        self.CXITree = CXITree(self)
+        self.CXINavigation = QtGui.QWidget(self)
+        self.CXINavigation.vbox = QtGui.QVBoxLayout()
+        self.CXINavigation.setLayout(self.CXINavigation.vbox)
 
-#        self.datasetProp.hide()                
-        self.splitter.addWidget(self.CXITree)
+        self.CXINavigationTop = QtGui.QGroupBox("View")
+        self.CXINavigationTop.vbox = QtGui.QVBoxLayout()
+        self.CXINavigationTop.setLayout(self.CXINavigationTop.vbox)        
+        self.CXITreeTop = CXITreeTop(self)
+        self.CXINavigationTop.vbox.addWidget(self.CXITreeTop)
+        self.CXINavigation.vbox.addWidget(self.CXINavigationTop)
+
+        self.CXINavigationBottom = QtGui.QGroupBox("Sort")
+        self.CXINavigationBottom.vbox = QtGui.QVBoxLayout()
+        self.CXINavigationBottom.setLayout(self.CXINavigationBottom.vbox)
+        self.CXITreeBottom = CXITreeBottom(self)
+        self.CXINavigationBottom.vbox.addWidget(self.CXITreeBottom)
+        self.CXINavigation.vbox.addWidget(self.CXINavigationBottom)
+
+        self.splitter.addWidget(self.CXINavigation)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.datasetProp)
         
@@ -61,7 +76,8 @@ class Viewer(QtGui.QMainWindow):
 
     def after_show(self):
         if(len(sys.argv) > 1):
-            self.CXITree.buildTree(sys.argv[1])
+            self.CXITreeTop.buildTree(sys.argv[1])
+            self.CXITreeBottom.buildTree(sys.argv[1])
         
     def init_menus(self):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
@@ -93,16 +109,16 @@ class Viewer(QtGui.QMainWindow):
     def openFileClicked(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
         if(fileName[0]):
-            self.CXITree.buildTree(fileName[0])
+            self.CXITreeTop.buildTree(fileName[0])
     def assembleGeometryClicked(self):
-        self.geometry.assemble_detectors(self.CXITree.f)
+        self.geometry.assemble_detectors(self.CXITreeTop.f)
     def viewFileTreeClicked(self,checked):
         if(checked):
             self.statusBar.showMessage("Showing CXI file tree",1000)
-            self.CXITree.show()
+            self.CXITreeTop.show()
         else:
             self.statusBar.showMessage("Hiding CXI file tree",1000)
-            self.CXITree.hide()
+            self.CXITreeTop.hide()
     def viewDatasetPropertiesClicked(self,checked):
         if(checked):
             self.statusBar.showMessage("Showing dataset properties",1000)

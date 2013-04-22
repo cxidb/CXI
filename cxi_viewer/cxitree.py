@@ -8,15 +8,80 @@ class CXITree(QtGui.QTreeWidget):
     def __init__(self,parent=None):        
         QtGui.QTreeWidget.__init__(self,parent)
         self.parent = parent
-        self.itemClicked.connect(self.handleClick)
         self.itemExpanded.connect(self.treeChanged)
         self.itemCollapsed.connect(self.treeChanged)
+        self.setHeaderLabels(["CXI-file tree"])
         self.resizeColumnToContents(0)
         self.currDatasetName = self.currGroupName = None
+    def treeChanged(self):
+        self.manageSizes()
+    def manageSizes(self):
+        self.resizeColumnToContents(0)
+    def buildTree(self,filename):
+        self.clear();
+        self.datasets = {}
+        self.setColumnCount(1)
+        self.f = h5py.File(filename, "r")
+        root = QtGui.QTreeWidgetItem(["/"])
+        self.addTopLevelItem(root)
+        item = QtGui.QTreeWidgetItem([QtCore.QFileInfo(filename).fileName()])
+        item.setToolTip(0,filename)
+        root.addChild(item)
+        self.buildBranch(self.f,item)
+        #self.loadData1()
+    def buildBranch(self,group,item):
+        self.columnPath = 1
+        for g in group.keys():
+            lst = [g]
+            if(isinstance(group[g],h5py.Group)):
+                child = QtGui.QTreeWidgetItem(lst)
+                self.buildBranch(group[g],child)
+                item.addChild(child)
+            else:
+                if(not group[g].shape or reduce(mul,group[g].shape) < 10):
+                    lst.append(str(group[g][()]))
+                    lst.append("")
+                    child = QtGui.QTreeWidgetItem(lst)
+                else:
+                    dataset = group[g]
+                    ds_dtype = dataset.dtype.name
+                    ds_shape = dataset.shape
+                    self.datasets[group[g].name] = dataset
+                    string = "<i>"+ds_dtype+"</i> ("
+                    for d in ds_shape:
+                        string += str(d)+","
+                    string = string[:-3]
+                    string += ")"
+                    lst.append(group[g].name)
+                    child = QtGui.QTreeWidgetItem(lst)
+                    child.setToolTip(self.columnPath-1,string)
+                    if len(ds_shape) == 1:
+                        R = 0
+                        G = 0
+                        B = 120
+                    if len(ds_shape) == 2: 
+                        R = 0
+                        G = 120
+                        B = 0
+                    if len(ds_shape) == 3:
+                        R = 120
+                        G = 0
+                        B = 0
+                    child.setForeground(0,QtGui.QBrush(QtGui.QColor(R,G,B)))
+                    if g.rsplit("/",1)[-1] == 'data':
+                        font = QtGui.QFont()
+                        font.setBold(True)
+                        child.setFont(0,font)
+                item.addChild(child)
+
+class CXITreeTop(CXITree):
+    def __init__(self,parent=None):        
+        CXITree.__init__(self,parent)
+        self.itemClicked.connect(self.handleClick)
     def handleClick(self,item,column):
-        if(item.text(column) == "Click to display"):
-            self.currDatasetName = str(item.text(2))
-            self.currGroupName = str(item.text(2).rsplit("/",1)[0])
+        if(item.text(self.columnPath) != ""):
+            self.currDatasetName = str(item.text(self.columnPath))
+            self.currGroupName = str(item.text(self.columnPath).rsplit("/",1)[0])
             data = self.datasets[self.currDatasetName]
             if(numpy.iscomplexobj(data[0])):
                 data = numpy.abs(data)
@@ -30,10 +95,10 @@ class CXITree(QtGui.QTreeWidget):
                 self.parent.view.clear()
                 self.parent.view.loadImage(data)
                 print str(item.text(2))
-                self.parent.statusBar.showMessage("Loaded %s" % (str(item.text(2))),1000)
+                self.parent.statusBar.showMessage("Loaded %s" % (str(item.text(self.columnPath))),1000)
             elif(len(data.shape) == 3):
                 # Check for the axis attribute
-                if('axes' in self.datasets[str(item.text(2))].attrs.keys() is not None):
+                if('axes' in self.datasets[str(item.text(self.columnPath))].attrs.keys() is not None):
                     self.parent.datasetProp.clear()
                     self.parent.view.clear()
                     self.parent.view.loadStack(data)
@@ -50,45 +115,6 @@ class CXITree(QtGui.QTreeWidget):
                 QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets with more than 3 dimensions. The selected dataset has %d dimensions." %(len(data.shape))))
                 return
             self.parent.datasetProp.setDataset(data);
-
-    def treeChanged(self):
-        self.manageSizes()
-    def manageSizes(self):
-        self.resizeColumnToContents(0)
-        self.resizeColumnToContents(1)
-        width = self.columnWidth(0) + min(125,self.columnWidth(1))
-        sizes = self.parent.splitter.sizes()
-        sizes[0] = width
-        self.parent.splitter.setSizes(sizes)        
-    def buildTree(self,filename):
-        self.clear();
-        self.datasets = {}
-        self.setColumnCount(2)
-        self.f = h5py.File(filename, "r")
-        root = QtGui.QTreeWidgetItem(["/"])
-        self.addTopLevelItem(root)
-        item = QtGui.QTreeWidgetItem([QtCore.QFileInfo(filename).fileName()])
-        item.setToolTip(0,filename)
-        root.addChild(item)
-        self.buildBranch(self.f,item)
-        self.parent.view.clear()
-        self.parent.datasetProp.clearDataset()
-        self.loadData1()
-    def buildBranch(self,group,item):        
-        for g in group.keys():
-            lst = [g]
-            if(isinstance(group[g],h5py.Group)):
-                child = QtGui.QTreeWidgetItem(lst)
-                self.buildBranch(group[g],child)
-                item.addChild(child)                                    
-            else:
-                if(not group[g].shape or reduce(mul,group[g].shape) < 10):
-                    lst.append(str(group[g][()]))
-                else:
-                    lst.append("Click to display")
-                    lst.append(group[g].name)
-                    self.datasets[group[g].name] = group[g]
-                item.addChild(QtGui.QTreeWidgetItem(lst))
     def loadData1(self):
         root = self.topLevelItem(0)
         root.setExpanded(True)
@@ -108,3 +134,22 @@ class CXITree(QtGui.QTreeWidget):
             self.handleClick(root,1)
             return 1
         return 0
+
+class CXITreeBottom(CXITree):
+    def __init__(self,parent=None):        
+        CXITree.__init__(self,parent)
+        self.itemClicked.connect(self.handleClick)
+    def handleClick(self,item,column):
+        if(item.text(self.columnPath) != ""):
+            self.currDatasetName = str(item.text(self.columnPath))
+            self.currGroupName = str(item.text(self.columnPath).rsplit("/",1)[0])
+            data = self.datasets[self.currDatasetName]
+            if(len(data.shape) == 1):
+                data.form = '1D Data'
+                self.currentDataset = data
+            else:
+                QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(data.shape))))
+                self.currentDataset = None
+            self.parent.view.loaderThread.setSortingIndices(self.currentDataset)
+            self.parent.view.clearTextures()
+            self.parent.view.updateGL()    

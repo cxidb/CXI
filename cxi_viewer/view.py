@@ -20,6 +20,7 @@ class ImageLoader(QtCore.QObject):
         self.setColormap()
         self.setPixelmask()
         self.setMaskOutBits()
+        self.setSortingIndices()
         self.initialLoad = True
     @QtCore.Slot(int,int)
     def loadImage(self,img):
@@ -28,8 +29,9 @@ class ImageLoader(QtCore.QObject):
         if self.initialLoad:
             self.update()
             self.intialLoad = False
+        img_sorted = self.getSortedIndex(img)
+        data = self.view.data[img_sorted,:]
         self.loaded[img] = True
-        data = self.view.data[img,:]
         offset = float(numpy.min(data))
         scale = float(numpy.max(data)-offset)
         if(scale == 0):
@@ -45,16 +47,16 @@ class ImageLoader(QtCore.QObject):
             data[data<self.mappable.get_clim()[0]] = self.mappable.get_clim()[0]
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if self.view.mask != None and not self.maskOutBits == 0:
-            mask = self.getMask(img)
+            mask = self.getMask(img_sorted)
             self.imageData[img][:,:,3] = 255*((mask & self.maskOutBits) == 0)
         self.imageLoaded.emit(img)
-    def getMask(self,img):
+    def getMask(self,img_sorted):
         if self.pixelmaskText == 'none':
             return None
         elif self.pixelmaskText == 'mask_shared':
             return self.view.mask[:]
         elif self.pixelmaskText == 'mask':
-            return self.view.mask[img,:]
+            return self.view.mask[img_sorted,:]
     def setColormap(self,name='jet'):
         self.mappable.set_cmap(name)
     def setNorm(self,name='log',vmin=1.,vmax=10000.):
@@ -71,14 +73,24 @@ class ImageLoader(QtCore.QObject):
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
     def setPixelmask(self,pixelmaskText="none"):
-        if hasattr(self.view.parent,'CXITree'):
+        if hasattr(self.view.parent,'CXITreeTop'):
             if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
-                self.view.mask = self.view.parent.CXITree.f[self.view.parent.CXITree.currGroupName+'/'+pixelmaskText]
+                self.view.mask = self.view.parent.CXITreeTop.f[self.view.parent.CXITreeTop.currGroupName+'/'+pixelmaskText]
         if pixelmaskText == "none":
             self.view.mask = None
         self.pixelmaskText = pixelmaskText
     def setMaskOutBits(self,value=0):
         self.maskOutBits = value
+    def setSortingIndices(self, data=None):
+        if data != None:
+            self.sortingIndices = numpy.argsort(data)
+        else:
+            self.sortingIndices = None
+    def getSortedIndex(self,index):
+        if self.sortingIndices != None:
+            return self.sortingIndices[index]
+        else:
+            return index
     def update(self):
         if hasattr(self.view.parent,'datasetProp'):
             self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
