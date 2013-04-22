@@ -4,6 +4,9 @@ from OpenGL.GLU import *
 from PySide import QtGui, QtCore, QtOpenGL
 import numpy
 import math
+from matplotlib import colors
+from matplotlib import cm
+
 
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
@@ -12,29 +15,114 @@ class ImageLoader(QtCore.QObject):
         self.view = view
         self.imageData = {}
         self.loaded = {}
+        self.mappable = cm.ScalarMappable()
+        self.setNorm()
+        self.setColormap()
+        self.setPixelmask()
+        self.setMaskOutBits()
+        self.setSortingIndices()
+        self.initialLoad = True
     @QtCore.Slot(int,int)
     def loadImage(self,img):
         if(img in self.loaded):
-            return
+           return
+        if self.initialLoad:
+            self.update()
+            self.intialLoad = False
+        img_sorted = self.getSortedIndex(img)
+        data = self.view.data[img_sorted,:]
         self.loaded[img] = True
-        data = self.view.data[img,:]
-        offset = float(numpy.min(data));
+        offset = float(numpy.min(data))
         scale = float(numpy.max(data)-offset)
         if(scale == 0):
             scale = 1
-        self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
-        gamma = self.view.parent.datasetProp.displayGamma.value();
+        self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],4),dtype=numpy.uint8)
+        if self.gamma != 1:
+            data = numpy.array(data**self.gamma,dtype='int16')
         if(self.view.parent.datasetProp.imageStackBox.isVisible() and
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        self.imageData[img][:,:,0] = 255*((data-offset)/scale)**(gamma)
-        self.imageData[img][:,:,1] = 255*((data-offset)/scale)**(gamma)
-        self.imageData[img][:,:,2] = 255*((data-offset)/scale)**(gamma)
+        if self.normName == 'log' or self.normName == 'pow':
+            data[data<self.mappable.get_clim()[0]] = self.mappable.get_clim()[0]
+        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
+        if self.view.mask != None and not self.maskOutBits == 0:
+            mask = self.getMask(img_sorted)
+            self.imageData[img][:,:,3] = 255*((mask & self.maskOutBits) == 0)
         self.imageLoaded.emit(img)
+    def getMask(self,img_sorted):
+        if self.pixelmaskText == 'none':
+            return None
+        elif self.pixelmaskText == 'mask_shared':
+            return self.view.mask[:]
+        elif self.pixelmaskText == 'mask':
+            return self.view.mask[img_sorted,:]
+    def setColormap(self,name='jet'):
+        self.mappable.set_cmap(name)
+    def setNorm(self,name='log',vmin=1.,vmax=10000.):
+        if name == 'lin':
+            norm = colors.Normalize()
+            self.gamma = 1
+        elif name == 'pow':
+            norm = colors.Normalize()
+            self.gamma = self.view.parent.datasetProp.displayGamma.value()
+        elif name == 'log':
+            norm = colors.LogNorm()
+            self.gamma = 1
+        self.normName = name
+        self.mappable.set_norm(norm)
+        self.mappable.set_clim(vmin,vmax)
+    def setPixelmask(self,pixelmaskText="none"):
+        if hasattr(self.view.parent,'CXITreeTop'):
+            if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
+                self.view.mask = self.view.parent.CXITreeTop.f[self.view.parent.CXITreeTop.currGroupName+'/'+pixelmaskText]
+        if pixelmaskText == "none":
+            self.view.mask = None
+        self.pixelmaskText = pixelmaskText
+    def setMaskOutBits(self,value=0):
+        self.maskOutBits = value
+    def setSortingIndices(self, data=None):
+        if data != None:
+            self.sortingIndices = numpy.argsort(data)
+        else:
+            self.sortingIndices = None
+    def getSortedIndex(self,index):
+        if self.sortingIndices != None:
+            return self.sortingIndices[index]
+        else:
+            return index
+    def update(self):
+        if hasattr(self.view.parent,'datasetProp'):
+            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
+            vmin = self.view.parent.datasetProp.displayMin.value()
+            vmax = self.view.parent.datasetProp.displayMax.value()
+            if vmin >= vmax:
+                vmin = vmax - 1000.
+                self.view.parent.datasetProp.displayMin.setValue(vmin)
+            if self.view.parent.datasetProp.displayLin.isChecked():
+                self.setNorm('lin',vmin,vmax)
+            elif self.view.parent.datasetProp.displayLog.isChecked():
+                if vmin <= 0.:
+                    vmin = 1.
+                    self.view.parent.datasetProp.displayMin.setValue(vmin)
+                if vmax <= 0.:
+                    vmax = vmin+10000.
+                    self.view.parent.datasetProp.displayMax.setValue(vmax)
+                self.setNorm('log',vmin,vmax)
+            elif self.view.parent.datasetProp.displayPow.isChecked():
+                self.setNorm('pow',vmin,vmax)
+            else: print "ERROR: No Scaling chosen."
+            self.setPixelmask(self.view.parent.datasetProp.maskPixelmask.currentText())
+            maskOutBits = 0
+            masksBoxes = self.view.parent.datasetProp.masksBoxes
+            for maskKey in masksBoxes:
+                if masksBoxes[maskKey].isChecked():
+                    maskOutBits |= PIXELMASK_BITS[maskKey]
+            self.setMaskOutBits(maskOutBits)
     def clear(self):
         self.imageData = {}
         self.loaded = {}
+        self.intialLoad = True
 
 class View(QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int) 
@@ -361,11 +449,13 @@ class View(QtOpenGL.QGLWidget):
     @QtCore.Slot(int)
     def generateTexture(self,img):
         texture = glGenTextures(1)
+        glEnable(GL_BLEND)
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glBindTexture(GL_TEXTURE_2D, texture)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, self.loaderThread.imageData[img].shape[1], self.loaderThread.imageData[img].shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, self.loaderThread.imageData[img]);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self.loaderThread.imageData[img].shape[1], self.loaderThread.imageData[img].shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, self.loaderThread.imageData[img]);
         self.textureIds[img] = texture
         self.updateGL()
     def updateTextures(self,images):
@@ -374,7 +464,7 @@ class View(QtOpenGL.QGLWidget):
                 self.needsImage.emit(img)
     def wheelEvent(self, event):    
         settings = QtCore.QSettings()    
-        self.translation[1] -= event.delta()*settings.value("scrollDirection")
+        self.translation[1] -= event.delta()*float(settings.value("scrollDirection"))
         self.clipTranslation()
         self.updateGL()
         # Do not allow zooming
@@ -582,6 +672,8 @@ class View(QtOpenGL.QGLWidget):
     def clearTextures(self):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
+        self.loaderThread.clear()
+        self.loaderThread.update()
     def setStackWidth(self,width):  
         ratio = float(self.stackWidth)/width 
         self.stackWidth = width 
@@ -592,14 +684,38 @@ class View(QtOpenGL.QGLWidget):
         # Now change the width and zoom to match
         self.stackWidth = width
         self.zoomFromStackWidth(width)            
-        print self.height()
-        print ratio
-        print self.translation[1]
         self.translation[1] = (self.translation[1] + self.height()/2.0)*ratio-self.height()/2.0
-        print self.translation[1]
         self.clipTranslation()
         self.parent.view.updateGL()
     def stackSceneWidth(self,width):
         return 
     def subplotSceneBorder(self):
         return self.subplotBorder/self.zoom
+
+
+
+PIXEL_IS_PERFECT = 0
+PIXEL_IS_INVALID = 1
+PIXEL_IS_SATURATED = 2
+PIXEL_IS_HOT = 4
+PIXEL_IS_DEAD = 8
+PIXEL_IS_SHADOWED = 16
+PIXEL_IS_IN_PEAKMASK = 32
+PIXEL_IS_TO_BE_IGNORED = 64
+PIXEL_IS_BAD = 128
+PIXEL_IS_OUT_OF_RESOLUTION_LIMITS = 256
+PIXEL_IS_MISSING = 512
+PIXEL_IS_IN_HALO = 1024
+
+PIXELMASK_BITS = {'perfect' : PIXEL_IS_PERFECT,
+                  'invalid' : PIXEL_IS_INVALID,
+                  'saturated' : PIXEL_IS_SATURATED,
+                  'hot' : PIXEL_IS_HOT,
+                  'dead' : PIXEL_IS_DEAD,
+                  'shadowed' : PIXEL_IS_SHADOWED,
+                  'peakmask' : PIXEL_IS_IN_PEAKMASK,
+                  'ignore' : PIXEL_IS_TO_BE_IGNORED,
+                  'bad' : PIXEL_IS_BAD,
+                  'resolution' : PIXEL_IS_OUT_OF_RESOLUTION_LIMITS,
+                  'missing' : PIXEL_IS_MISSING,
+                  'halo' : PIXEL_IS_IN_HALO}
