@@ -450,7 +450,7 @@ class View(QtOpenGL.QGLWidget):
                 self.needsImage.emit(img)
     def wheelEvent(self, event):    
         settings = QtCore.QSettings()    
-        self.translation[1] -= event.delta()*settings.value("scrollDirection")
+        self.translation[1] -= event.delta()*float(settings.value("scrollDirection"))
         if(self.has_data):
             margin = self.height()/2.0
             img_height = (self.data.shape[1]+self.subplotSceneBorder())*self.zoom

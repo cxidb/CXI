@@ -23,6 +23,7 @@ View only tagged ones
 Tagging with numbers
 Different tags different colors
 Multiple tags per image
+Sort images by variable
 
 """
 
