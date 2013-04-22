@@ -7,6 +7,31 @@ import math
 from matplotlib import colors
 from matplotlib import cm
 
+class PowNorm(colors.Normalize):
+    def __init__(self, gamma=1, vmin=None, vmax=None, clip=False):
+        colors.Normalize.__init__(self,vmin,vmax,clip)
+        self.gamma = gamma
+        self.clip = clip
+    def __call__(self,value,clip=None):
+        clip = self.clip
+        outvalue = value.copy()
+        mask = (False==numpy.isfinite(outvalue))
+        above = value > self.vmax
+        if above.sum() > 0:
+            if clip: outvalue[above] = self.vmax
+            else: mask |= above
+        below = value < self.vmin
+        if below.sum() > 0:
+            if clip: outvalue[below] = self.vmin
+            else: mask |= below
+        if self.gamma < 1:
+            below = value < 0
+            if below.sum() > 0:
+                if clip: outvalue[below] = 0
+                else: mask |= below
+        outvalue = outvalue**self.gamma/self.vmax**self.gamma
+        return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
+
 
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
@@ -37,14 +62,12 @@ class ImageLoader(QtCore.QObject):
         if(scale == 0):
             scale = 1
         self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],4),dtype=numpy.uint8)
-        if self.gamma != 1:
-            data = numpy.array(data**self.gamma,dtype='int16')
+        if self.normName == 'log':
+            data[data<=0] = self.mappable.get_clim()[0]
         if(self.view.parent.datasetProp.imageStackBox.isVisible() and
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        if self.normName == 'log' or self.normName == 'pow':
-            data[data<self.mappable.get_clim()[0]] = self.mappable.get_clim()[0]
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if self.view.mask != None and not self.maskOutBits == 0:
             mask = self.getMask(img_sorted)
@@ -59,16 +82,14 @@ class ImageLoader(QtCore.QObject):
             return self.view.mask[img_sorted,:]
     def setColormap(self,name='jet'):
         self.mappable.set_cmap(name)
-    def setNorm(self,name='log',vmin=1.,vmax=10000.):
+    def setNorm(self,name='log',vmin=1.,vmax=10000.,gamma=1):
         if name == 'lin':
-            norm = colors.Normalize()
-            self.gamma = 1
+            norm = colors.Normalize(vmin,vmax,True)
         elif name == 'pow':
-            norm = colors.Normalize()
-            self.gamma = self.view.parent.datasetProp.displayGamma.value()
+            gamma = self.view.parent.datasetProp.displayGamma.value()
+            norm = PowNorm(gamma,vmin,vmax,True)
         elif name == 'log':
-            norm = colors.LogNorm()
-            self.gamma = 1
+            norm = colors.LogNorm(vmin,vmax,True)
         self.normName = name
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
@@ -110,7 +131,7 @@ class ImageLoader(QtCore.QObject):
                     self.view.parent.datasetProp.displayMax.setValue(vmax)
                 self.setNorm('log',vmin,vmax)
             elif self.view.parent.datasetProp.displayPow.isChecked():
-                self.setNorm('pow',vmin,vmax)
+                self.setNorm('pow',vmin,vmax,)
             else: print "ERROR: No Scaling chosen."
             self.setPixelmask(self.view.parent.datasetProp.maskPixelmask.currentText())
             maskOutBits = 0
@@ -691,6 +712,8 @@ class View(QtOpenGL.QGLWidget):
         return 
     def subplotSceneBorder(self):
         return self.subplotBorder/self.zoom
+
+
 
 
 
