@@ -4,6 +4,7 @@ from operator import mul
 import numpy,ctypes
 from matplotlib import colors
 from matplotlib import cm
+#import pyqtgraph
 
 def sizeof_fmt(num):
     for x in ['bytes','kB','MB','GB']:
@@ -72,6 +73,8 @@ class DatasetProp(QtGui.QWidget):
 
         self.displayBox = QtGui.QGroupBox("Display Properties");
         self.displayBox.vbox = QtGui.QVBoxLayout()
+#        self.intensityHistogram = pyqtgraph.PlotWidget()
+#        self.displayBox.vbox.addWidget(self.intensityHistogram)
 
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Maximum value:"))
@@ -227,6 +230,7 @@ class DatasetProp(QtGui.QWidget):
             self.imageStackBox.show()
         else:
             self.imageStackBox.hide()
+
             
     def clearDataset(self):
         string = "Dimensions: "
@@ -271,6 +275,17 @@ class DatasetProp(QtGui.QWidget):
     def clear(self):
         self.maskPixelmaskRefreshItems()
 
+    def onImageSelected(self,selectedImage):
+        self.imageStackImageSelected.setText(str(selectedImage))
+        if(selectedImage is not None):
+            self.imageMin.setText(str(numpy.min(self.data[selectedImage])))
+            self.imageMax.setText(str(numpy.max(self.data[selectedImage])))
+            self.imageSum.setText(str(numpy.sum(self.data[selectedImage])))
+#            numpy.histogram(data,)
+#            self.intensityHistogram.plot()
+            self.imageBox.show()
+        else:
+            self.parent.datasetProp.imageBox.hide()
 def paintColormapIcons(W,H):
     a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
     maps=[m for m in cm.datad if not m.endswith("_r")]
