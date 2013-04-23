@@ -283,9 +283,9 @@ class DatasetProp(QtGui.QWidget):
     def maskPixelmaskRefreshItems(self):
         self.maskPixelmask.clear()
         self.maskPixelmask.addItem("none")
-        if hasattr(self.parent,'CXITreeTop'):
-            if self.parent.CXITreeTop.currGroupName != None:
-                datasets = self.parent.CXITreeTop.f[self.parent.CXITreeTop.currGroupName].keys()
+        if hasattr(self.parent,'CXINavigation'):
+            if self.parent.CXINavigation.CXITreeTop.currGroupName != None:
+                datasets = self.parent.CXINavigation.CXITreeTop.f[self.parent.CXINavigation.CXITreeTop.currGroupName].keys()
                 if 'mask_shared' in datasets:
                     self.maskPixelmask.addItem("mask_shared")
                     if 'mask' in datasets:

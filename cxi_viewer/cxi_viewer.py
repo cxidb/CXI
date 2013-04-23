@@ -23,7 +23,7 @@ View only tagged ones
 Tagging with numbers
 Different tags different colors
 Multiple tags per image
-Sort images by variable
+
 
 """
 
@@ -36,28 +36,11 @@ class Viewer(QtGui.QMainWindow):
         self.splitter = QtGui.QSplitter(self)
         self.view = View(self)
         self.datasetProp = DatasetProp(self)
-        self.CXINavigation = QtGui.QWidget(self)
-        self.CXINavigation.vbox = QtGui.QVBoxLayout()
-        self.CXINavigation.setLayout(self.CXINavigation.vbox)
-
-        self.CXINavigationTop = QtGui.QGroupBox("View")
-        self.CXINavigationTop.vbox = QtGui.QVBoxLayout()
-        self.CXINavigationTop.setLayout(self.CXINavigationTop.vbox)        
-        self.CXITreeTop = CXITreeTop(self)
-        self.CXINavigationTop.vbox.addWidget(self.CXITreeTop)
-        self.CXINavigation.vbox.addWidget(self.CXINavigationTop)
-
-        self.CXINavigationBottom = QtGui.QGroupBox("Sort")
-        self.CXINavigationBottom.vbox = QtGui.QVBoxLayout()
-        self.CXINavigationBottom.setLayout(self.CXINavigationBottom.vbox)
-        self.CXITreeBottom = CXITreeBottom(self)
-        self.CXINavigationBottom.vbox.addWidget(self.CXITreeBottom)
-        self.CXINavigation.vbox.addWidget(self.CXINavigationBottom)
-
+        self.CXINavigation = CXINavigation(self)
         self.splitter.addWidget(self.CXINavigation)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.datasetProp)
-        
+
         self.splitter.setStretchFactor(0,0)
         self.splitter.setStretchFactor(1,1)
         self.setCentralWidget(self.splitter)
@@ -76,8 +59,8 @@ class Viewer(QtGui.QMainWindow):
 
     def after_show(self):
         if(len(sys.argv) > 1):
-            self.CXITreeTop.buildTree(sys.argv[1])
-            self.CXITreeBottom.buildTree(sys.argv[1])
+            self.CXINavigation.CXITreeTop.buildTree(sys.argv[1])
+            self.CXINavigation.CXITreeBottom.buildTree(sys.argv[1])
         
     def init_menus(self):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
@@ -88,50 +71,60 @@ class Viewer(QtGui.QMainWindow):
         self.fileMenu.addAction(self.preferences)
         self.preferences.triggered.connect(self.preferencesClicked)
 
-        self.geometryMenu = self.menuBar().addMenu(self.tr("&Geometry"));
-        self.assembleGeometry = QtGui.QAction("Assemble",self)
-        self.geometryMenu.addAction(self.assembleGeometry)
-        self.assembleGeometry.triggered.connect(self.assembleGeometryClicked)
+        #self.geometryMenu = self.menuBar().addMenu(self.tr("&Geometry"));
+        #self.assembleGeometry = QtGui.QAction("Assemble",self)
+        #self.geometryMenu.addAction(self.assembleGeometry)
+        #self.assembleGeometry.triggered.connect(self.assembleGeometryClicked)
+        
         self.viewMenu = self.menuBar().addMenu(self.tr("&View"));
 
-        self.viewFileTree = QtGui.QAction("File Tree",self)
-        self.viewFileTree.setCheckable(True);
-        self.viewFileTree.setChecked(True);
-        self.viewMenu.addAction(self.viewFileTree)
-        self.viewFileTree.triggered.connect(self.viewFileTreeClicked)
+        self.viewActions = {"File Trees" : QtGui.QAction("File Trees",self),
+                            "Dataset Properties" : QtGui.QAction("Dataset Properties",self),
+                            "General Properties" : QtGui.QAction("General Properties",self),
+                            "Display Properties" : QtGui.QAction("Display Properties",self),
+                            "Mask Out Pixels" : QtGui.QAction("Mask Out Pixels",self)}
 
-        self.viewDatasetProperties = QtGui.QAction("Dataset Properties",self)
-        self.viewDatasetProperties.setCheckable(True);
-        self.viewDatasetProperties.setChecked(True);
-        self.viewMenu.addAction(self.viewDatasetProperties)
-        self.viewDatasetProperties.triggered.connect(self.viewDatasetPropertiesClicked)
+        viewNames = ["File Trees",
+                     "Dataset Properties",
+                     "General Properties",
+                     "Display Properties",
+                     "Mask Out Pixels"]
+        
+        for viewName in viewNames:
+            act = self.viewActions[viewName]
+            act.setCheckable(True)
+            act.setChecked(True)
+            self.viewMenu.addAction(act)
+            act.triggered.connect(self.viewClicked)
+            if viewName == "Dataset Properties": 
+                self.viewMenu.addSeparator()
 
     def openFileClicked(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
         if(fileName[0]):
-            self.CXITreeTop.buildTree(fileName[0])
+            self.CXINavigation.CXITreeTop.buildTree(fileName[0])
     def assembleGeometryClicked(self):
-        self.geometry.assemble_detectors(self.CXITreeTop.f)
-    def viewFileTreeClicked(self,checked):
+        self.geometry.assemble_detectors(self.CXINavigation.CXITreeTop.f)
+    def viewClicked(self):
+        viewBoxes = {"File Trees" : self.CXINavigation,
+                     "Dataset Properties" : self.datasetProp,
+                     "General Properties" : self.datasetProp.generalBox,
+                     "Display Properties" : self.datasetProp.displayBox,
+                     "Mask Out Pixels" : self.datasetProp.maskBox}
+        viewName = self.sender().text()
+        box = viewBoxes[viewName]
+        checked = self.viewActions[viewName].isChecked()
         if(checked):
-            self.statusBar.showMessage("Showing CXI file tree",1000)
-            self.CXITreeTop.show()
+            self.statusBar.showMessage("Showing %s" % viewName,1000)
+            box.show()
         else:
-            self.statusBar.showMessage("Hiding CXI file tree",1000)
-            self.CXITreeTop.hide()
-    def viewDatasetPropertiesClicked(self,checked):
-        if(checked):
-            self.statusBar.showMessage("Showing dataset properties",1000)
-            self.datasetProp.show()
-        else:
-            self.statusBar.showMessage("Hiding dataset properties",1000)
-            self.datasetProp.hide()
+            self.statusBar.showMessage("Hiding %s" % viewName,1000)
+            box.hide()
     def closeEvent(self,event):
         settings = QtCore.QSettings()
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
         QtGui.QMainWindow.closeEvent(self,event)
-
     def preferencesClicked(self):
         diag = PreferencesDialog(self)
         settings = QtCore.QSettings()

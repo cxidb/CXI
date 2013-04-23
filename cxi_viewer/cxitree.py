@@ -4,6 +4,27 @@ import h5py
 from operator import mul
 import numpy
 
+class CXINavigation(QtGui.QWidget):
+    def __init__(self,parent=None):
+        QtGui.QWidget.__init__(self,parent)
+        self.vbox = QtGui.QVBoxLayout()
+        self.setLayout(self.vbox)
+
+        self.CXINavigationTop = QtGui.QGroupBox("View")
+        self.CXINavigationTop.vbox = QtGui.QVBoxLayout()
+        self.CXINavigationTop.setLayout(self.CXINavigationTop.vbox)        
+        self.CXITreeTop = CXITreeTop(self)
+        self.CXINavigationTop.vbox.addWidget(self.CXITreeTop)
+        self.vbox.addWidget(self.CXINavigationTop)
+
+        self.CXINavigationBottom = QtGui.QGroupBox("Sort")
+        self.CXINavigationBottom.vbox = QtGui.QVBoxLayout()
+        self.CXINavigationBottom.setLayout(self.CXINavigationBottom.vbox)
+        self.CXITreeBottom = CXITreeBottom(self)
+        self.CXINavigationBottom.vbox.addWidget(self.CXITreeBottom)
+        self.vbox.addWidget(self.CXINavigationBottom)
+
+
 class CXITree(QtGui.QTreeWidget):
     def __init__(self,parent=None):        
         QtGui.QTreeWidget.__init__(self,parent)
