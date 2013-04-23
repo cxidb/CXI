@@ -273,7 +273,8 @@ def paintColormapIcons(W,H):
         a_rgb[:,:,2] = temp[:,:,0]
         a_rgb[:,:,1] = temp[:,:,1]
         a_rgb[:,:,0] = temp[:,:,2]
-        img = QtGui.QImage(a_rgb,W,H,QtGui.QImage.Format_RGB32)
+        a_rgb[:,:,3] = 0xff
+        img = QtGui.QImage(a_rgb,W,H,QtGui.QImage.Format_ARGB32)
         icon = QtGui.QIcon(QtGui.QPixmap.fromImage(img))
         iconDict[m] = icon
     return iconDict
