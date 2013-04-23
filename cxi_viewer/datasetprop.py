@@ -4,7 +4,7 @@ from operator import mul
 import numpy,ctypes
 from matplotlib import colors
 from matplotlib import cm
-#import pyqtgraph
+import pyqtgraph
 
 def sizeof_fmt(num):
     for x in ['bytes','kB','MB','GB']:
@@ -73,30 +73,30 @@ class DatasetProp(QtGui.QWidget):
 
         self.displayBox = QtGui.QGroupBox("Display Properties");
         self.displayBox.vbox = QtGui.QVBoxLayout()
-#        self.intensityHistogram = pyqtgraph.PlotWidget()
-#        self.displayBox.vbox.addWidget(self.intensityHistogram)
 
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Maximum value:"))
-        self.displayMax = QtGui.QDoubleSpinBox(parent=self)
-        self.displayMax.setMinimum(-1000000.)
-        self.displayMax.setMaximum(1000000.)
-        self.displayMax.setValue(10000.)
-        self.displayMax.setSingleStep(100.)
-        self.displayMax.valueChanged.connect(self.displayChanged)
-        hbox.addWidget(self.displayMax)
-        self.displayBox.vbox.addLayout(hbox)
 
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Minimum value:"))
-        self.displayMin = QtGui.QDoubleSpinBox(parent=self)
-        self.displayMin.setMinimum(-1000000.)
-        self.displayMin.setMaximum(1000000.)
-        self.displayMin.setValue(0.)
-        self.displayMin.setSingleStep(100.)
-        self.displayMin.valueChanged.connect(self.displayChanged)
-        hbox.addWidget(self.displayMin)
-        self.displayBox.vbox.addLayout(hbox)
+
+        # hbox = QtGui.QHBoxLayout()
+        # hbox.addWidget(QtGui.QLabel("Maximum value:"))
+        # self.displayMax = QtGui.QDoubleSpinBox(parent=self)
+        # self.displayMax.setMinimum(-1000000.)
+        # self.displayMax.setMaximum(1000000.)
+        # self.displayMax.setValue(10000.)
+        # self.displayMax.setSingleStep(100.)
+        # self.displayMax.valueChanged.connect(self.displayChanged)
+        # hbox.addWidget(self.displayMax)
+        # self.displayBox.vbox.addLayout(hbox)
+
+        # hbox = QtGui.QHBoxLayout()
+        # hbox.addWidget(QtGui.QLabel("Minimum value:"))
+        # self.displayMin = QtGui.QDoubleSpinBox(parent=self)
+        # self.displayMin.setMinimum(-1000000.)
+        # self.displayMin.setMaximum(1000000.)
+        # self.displayMin.setValue(0.)
+        # self.displayMin.setSingleStep(100.)
+        
+        # hbox.addWidget(self.displayMin)
+        # self.displayBox.vbox.addLayout(hbox)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(QtGui.QLabel("Scaling:"))
@@ -184,23 +184,42 @@ class DatasetProp(QtGui.QWidget):
         self.imageBox.vbox = QtGui.QVBoxLayout()
 
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Max:"))
-        self.imageMax = QtGui.QLabel("None",parent=self)
-        hbox.addWidget(self.imageMax)
+        hbox.addWidget(QtGui.QLabel("Image Range:"))
+        self.imageRange = QtGui.QLabel("None",parent=self)
+        hbox.addWidget(self.imageRange)
         self.imageBox.vbox.addLayout(hbox)
 
         self.imageBox.setLayout(self.imageBox.vbox)
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Min:"))
-        self.imageMin = QtGui.QLabel("None",parent=self)
-        hbox.addWidget(self.imageMin)
-        self.imageBox.vbox.addLayout(hbox)
+
+        # hbox = QtGui.QHBoxLayout()
+        # hbox.addWidget(QtGui.QLabel("Min:"))
+        # self.imageMin = QtGui.QLabel("None",parent=self)
+        # hbox.addWidget(self.imageMin)
+        # self.imageBox.vbox.addLayout(hbox)
 
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Sum:"))
+        hbox.addWidget(QtGui.QLabel("Image Sum:"))
         self.imageSum = QtGui.QLabel("None",parent=self)
         hbox.addWidget(self.imageSum)
         self.imageBox.vbox.addLayout(hbox)
+
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Display Range:"))
+        self.displayMin = QtGui.QDoubleSpinBox(parent=self)
+        self.displayMin.editingFinished.connect(self.displayChanged)
+        self.displayMax = QtGui.QDoubleSpinBox(parent=self)
+        self.displayMax.editingFinished.connect(self.displayChanged)
+        hbox.addWidget(self.displayMin)
+        hbox.addWidget(QtGui.QLabel("to"))
+        hbox.addWidget(self.displayMax)    
+        self.imageBox.vbox.addLayout(hbox)
+
+        self.intensityHistogram = pyqtgraph.PlotWidget()
+        self.intensityHistogram.hideAxis('left')
+        self.intensityHistogram.hideAxis('bottom')
+#        self.intensityHistogram.setBackground(background=None)
+        self.intensityHistogram.setFixedHeight(50)
+        self.imageBox.vbox.addWidget(self.intensityHistogram)
 
         self.imageBox.hide()
         
@@ -278,14 +297,32 @@ class DatasetProp(QtGui.QWidget):
     def onImageSelected(self,selectedImage):
         self.imageStackImageSelected.setText(str(selectedImage))
         if(selectedImage is not None):
-            self.imageMin.setText(str(numpy.min(self.data[selectedImage])))
-            self.imageMax.setText(str(numpy.max(self.data[selectedImage])))
+            self.imageRange.setText("%d to %d" %(numpy.min(self.data[selectedImage]),numpy.max(self.data[selectedImage])))
+#            self.imageMin.setText(str(numpy.min(self.data[selectedImage])))
+#            self.imageMax.setText(str(numpy.max(self.data[selectedImage])))
             self.imageSum.setText(str(numpy.sum(self.data[selectedImage])))
-#            numpy.histogram(data,)
-#            self.intensityHistogram.plot()
+            (hist,edges) = numpy.histogram(self.data[selectedImage],bins=100)
+            self.intensityHistogram.clear()
+            edges = (edges[:-1]+edges[1:])/2.0
+            item = self.intensityHistogram.plot(edges,hist,fillLevel=0,fillBrush=QtGui.QColor(255, 255, 255, 128),antialias=True)
+            self.intensityHistogram.setBackground(background=None)
+            self.intensityHistogram.getPlotItem().getViewBox().setMouseEnabled(x=False,y=False)
+            item.sigClicked.connect(self.onHistogramClicked)
+#            self.intensityHistogram.getPlotItem().getViewBox().enableAutoRange(axis='bottom',enable=True)
+#            self.intensityHistogram.getPlotItem().getViewBox().enableAutoRange(axis='left',enable=True)
+            font = self.font()
+            font.setPointSize(8)
+            self.intensityHistogram.getPlotItem().getAxis('bottom').setTickFont(font) 
+            region = pyqtgraph.LinearRegionItem(values=[edges[0],edges[-1]],brush="#ffffff15")
+            region.setZValue(10)
+            region.setBounds([edges[0],edges[-1]])
+            region.sigRegionChangeFinished.connect(self.onHistogramClicked)
+            self.intensityHistogram.addItem(region)
             self.imageBox.show()
         else:
             self.parent.datasetProp.imageBox.hide()
+    def onHistogramClicked(self):
+        print "here"
 def paintColormapIcons(W,H):
     a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
     maps=[m for m in cm.datad if not m.endswith("_r")]
