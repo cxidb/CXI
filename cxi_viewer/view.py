@@ -558,15 +558,16 @@ class View(QtOpenGL.QGLWidget):
         self.dragging = False
         if(event.pos() == self.dragStart and event.button() == QtCore.Qt.LeftButton):
             self.selectedImage = self.lastHoveredImage
-            self.parent.datasetProp.imageStackImageSelected.setText(str(self.selectedImage))
-#            self.parent.datasetProp.recalculateSelectedSlice()
-            if(self.selectedImage is not None):
-                self.parent.datasetProp.imageMin.setText(str(numpy.min(self.data[self.selectedImage])))
-                self.parent.datasetProp.imageMax.setText(str(numpy.max(self.data[self.selectedImage])))
-                self.parent.datasetProp.imageSum.setText(str(numpy.sum(self.data[self.selectedImage])))
-                self.parent.datasetProp.imageBox.show()
-            else:
-                self.parent.datasetProp.imageBox.hide()
+            self.parent.datasetProp.onImageSelected(self.selectedImage)
+# #            self.parent.datasetProp.recalculateSelectedSlice()
+#             if(self.selectedImage is not None):
+#                 self.parent.datasetProp.onImageSelected(self.selectedImage)
+#                 self.parent.datasetProp.imageMin.setText(str(numpy.min(self.data[self.selectedImage])))
+#                 self.parent.datasetProp.imageMax.setText(str(numpy.max(self.data[self.selectedImage])))
+#                 self.parent.datasetProp.imageSum.setText(str(numpy.sum(self.data[self.selectedImage])))
+#                 self.parent.datasetProp.imageBox.show()
+#             else:
+#                 self.parent.datasetProp.imageBox.hide()
             self.updateGL()
     def mousePressEvent(self, event):
         self.dragStart = event.pos()
