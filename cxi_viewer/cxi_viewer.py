@@ -23,7 +23,7 @@ View only tagged ones
 Tagging with numbers
 Different tags different colors
 Multiple tags per image
-Sort images by variable
+
 
 """
 
@@ -40,7 +40,7 @@ class Viewer(QtGui.QMainWindow):
         self.splitter.addWidget(self.CXINavigation)
         self.splitter.addWidget(self.view)
         self.splitter.addWidget(self.datasetProp)
-        
+
         self.splitter.setStretchFactor(0,0)
         self.splitter.setStretchFactor(1,1)
         self.setCentralWidget(self.splitter)
