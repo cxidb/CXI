@@ -17,9 +17,21 @@ class DatasetProp(QtGui.QWidget):
         QtGui.QWidget.__init__(self,parent)
         self.parent = parent
         self.vbox = QtGui.QVBoxLayout()
+
+        self.vboxScroll = QtGui.QVBoxLayout()
+        self.scrollWidget = QtGui.QWidget()
+        self.scrollWidget.setLayout(self.vboxScroll)
+        self.scrollArea = QtGui.QScrollArea()
+        self.scrollArea.setWidgetResizable(True)
+        self.scrollArea.setFrameShape(QtGui.QFrame.NoFrame)
+        self.scrollArea.setWidget(self.scrollWidget)
+        self.scrollArea.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.scrollArea.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        self.vbox.addWidget(self.scrollArea)
+
         self.generalBox = QtGui.QGroupBox("General Properties");
         self.generalBox.vbox = QtGui.QVBoxLayout()
-        self.generalBox.setLayout(self.generalBox.vbox)        
+        self.generalBox.setLayout(self.generalBox.vbox)
         self.dimensionality = QtGui.QLabel("Dimensions:", parent=self)
         self.datatype = QtGui.QLabel("Data Type:", parent=self)
         self.datasize = QtGui.QLabel("Data Size:", parent=self)
@@ -189,12 +201,12 @@ class DatasetProp(QtGui.QWidget):
 
         self.imageBox.hide()
         
-        self.vbox.addWidget(self.generalBox)
-        self.vbox.addWidget(self.imageStackBox)
-        self.vbox.addWidget(self.imageBox)
-        self.vbox.addWidget(self.displayBox)
-        self.vbox.addWidget(self.maskBox)
-        self.vbox.addStretch()
+        self.vboxScroll.addWidget(self.generalBox)
+        self.vboxScroll.addWidget(self.imageStackBox)
+        self.vboxScroll.addWidget(self.imageBox)
+        self.vboxScroll.addWidget(self.displayBox)
+        self.vboxScroll.addWidget(self.maskBox)
+        self.vboxScroll.addStretch()
         self.setLayout(self.vbox)
         self.plots = 1
 
