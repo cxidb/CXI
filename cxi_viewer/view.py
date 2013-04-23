@@ -94,9 +94,9 @@ class ImageLoader(QtCore.QObject):
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
     def setPixelmask(self,pixelmaskText="none"):
-        if hasattr(self.view.parent,'CXITreeTop'):
+        if hasattr(self.view.parent,'CXINavigation'):
             if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
-                self.view.mask = self.view.parent.CXITreeTop.f[self.view.parent.CXITreeTop.currGroupName+'/'+pixelmaskText]
+                self.view.mask = self.view.parent.CXINavigation.CXITreeTop.f[self.view.parent.CXINavigation.CXITreeTop.currGroupName+'/'+pixelmaskText]
         if pixelmaskText == "none":
             self.view.mask = None
         self.pixelmaskText = pixelmaskText
