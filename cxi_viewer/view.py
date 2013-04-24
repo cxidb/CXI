@@ -6,6 +6,7 @@ import numpy
 import math
 from matplotlib import colors
 from matplotlib import cm
+import pyqtgraph
 
 class PowNorm(colors.Normalize):
     def __init__(self, gamma=1, vmin=None, vmax=None, clip=False):
@@ -68,6 +69,8 @@ class ImageLoader(QtCore.QObject):
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
+        #print self.imageData[img][0,0,0]
+        #print self.mappable.to_rgba(data,None,True)[0,0,0]
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if self.view.mask != None and not self.maskOutBits == 0:
             mask = self.getMask(img_sorted)
@@ -145,9 +148,23 @@ class ImageLoader(QtCore.QObject):
         self.loaded = {}
         self.intialLoad = True
 
+#class View:
+#    def __init_(self,parent=None):
+        
+
+
+#class View1D(View,pyqtgraph.PlotWidget):
+#    def __init__(self,parent=None):
+#        View.__init__(self)
+#        pyqtgraph.PlotWidget.__init__(name="1D Graph")
+        
+        
+
+#class View2D(View,QtOpenGL.QGLWidget):
 class View(QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int) 
     def __init__(self,parent=None):
+        #View.__init__(self)
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
         self.zoom = 4.0
@@ -444,9 +461,10 @@ class View(QtOpenGL.QGLWidget):
         print "Loading..."
         if(len(data.shape) == 2):        
             self.mode = "Stack"  
-            self.data = numpy.array(data)      
+            self.data = numpy.array(data)
             self.data = self.data.reshape((1,data.shape[0],data.shape[1]))
             self.has_data = True
+            self.setStackWidth(self.stackWidth)
         else:
             print "3D images not supported"
             sys.exit(-1)
