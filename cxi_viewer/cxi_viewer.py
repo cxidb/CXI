@@ -57,6 +57,11 @@ class Viewer(QtGui.QMainWindow):
             settings.setValue("scrollDirection", 1);  
         QtCore.QTimer.singleShot(0,self.after_show)
 
+        self.CXINavigation.CXITreeTop.datasetChanged.connect(self.handleViewDatasetChanged)
+        self.CXINavigation.CXITreeBottom.datasetChanged.connect(self.handleSortDatasetChanged)
+
+        self.datasetProp.pixelmaskChanged(self.handlePixelmaskChanged)
+
     def after_show(self):
         if(len(sys.argv) > 1):
             self.CXINavigation.CXITreeTop.buildTree(sys.argv[1])
@@ -133,6 +138,37 @@ class Viewer(QtGui.QMainWindow):
                 settings.setValue("scrollDirection",-1)
             else:
                 settings.setValue("scrollDirection",1)
+    def handleViewDatasetChanged(self,dataset):
+        format = dataset.getCXIFormat()
+        if format == 1:
+            # 1D Plotting
+            pass
+        elif format == 2:
+            if not dataset.isCXIStack():
+                self.datasetProp.clear()
+                self.view.clear()
+                self.view.loadImage(dataset)
+                self.statusBar.showMessage("Loaded %s" % (str(item.text(self.columnPath))),1000)
+            else:
+                self.datasetProp.clear()
+                self.view.clear()
+                self.view.loadStack(dataset)
+                self.statusBar.showMessage("Loaded slice 0",1000)
+        elif format == 3:
+            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets of given shape. The selected dataset has %d dimensions." %(len(dataset.shape))))
+            return
+        self.datasetProp.setDataset(dataset);
+    def handleSortDatasetChanged(self,dataset):
+        format = dataset.getCXIFormat()
+        if(format == 1):
+            self.view.loaderThread.setSortingIndices(dataset)
+            self.view.clearTextures()
+            self.view.updateGL()
+        else:
+            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
+    def handlePixelmaskChanged(self,pixelmask):
+        pass
+
    
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):

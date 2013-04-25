@@ -33,7 +33,6 @@ class PowNorm(colors.Normalize):
         outvalue = outvalue**self.gamma/self.vmax**self.gamma
         return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
 
-
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
     def __init__(self,parent = None,view = None):
@@ -69,8 +68,7 @@ class ImageLoader(QtCore.QObject):
            self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
             offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
             scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        #print self.imageData[img][0,0,0]
-        #print self.mappable.to_rgba(data,None,True)[0,0,0]
+        # weird error
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if self.view.mask != None and not self.maskOutBits == 0:
             mask = self.getMask(img_sorted)
@@ -99,9 +97,8 @@ class ImageLoader(QtCore.QObject):
     def setPixelmask(self,pixelmaskText="none"):
         if pixelmaskText == "none":
             self.view.mask = None
-        elif hasattr(self.view.parent,'CXINavigation'):
-            if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
-                self.view.mask = self.view.parent.CXINavigation.CXITreeTop.f[self.view.parent.CXINavigation.CXITreeTop.currGroupName+'/'+pixelmaskText]
+        elif self.pixelmaskText != pixelmaskText:
+            self.view.mask = self.view.data.getCXIMasks()[pixelmaskText]
         self.pixelmaskText = pixelmaskText
     def setMaskOutBits(self,value=0):
         self.maskOutBits = value
@@ -136,8 +133,6 @@ class ImageLoader(QtCore.QObject):
             elif self.view.parent.datasetProp.displayPow.isChecked():
                 self.setNorm('pow',vmin,vmax,)
             else: print "ERROR: No Scaling chosen."
-            print self.view.parent.datasetProp.maskPixelmask.currentText()
-            self.setPixelmask(self.view.parent.datasetProp.maskPixelmask.currentText())
             maskOutBits = 0
             masksBoxes = self.view.parent.datasetProp.masksBoxes
             for maskKey in masksBoxes:

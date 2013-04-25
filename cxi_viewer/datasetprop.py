@@ -145,7 +145,7 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(QtGui.QLabel("Pixelmask:"))
         self.maskPixelmask = QtGui.QComboBox(parent=self)
         self.maskPixelmaskRefreshItems()
-        self.maskPixelmask.currentIndexChanged.connect(self.maskChanged)
+        self.maskPixelmask.currentIndexChanged.connect(self.pixelmaskChanged)
         hbox.addWidget(self.maskPixelmask)
         self.maskBox.vbox.addLayout(hbox)
         self.maskLoaded = "None"
@@ -174,7 +174,7 @@ class DatasetProp(QtGui.QWidget):
                            'missing' : maskMissingPix,
                            'halo' : maskHaloPix}
         for maskKey in self.masksBoxes:
-            self.masksBoxes[maskKey].stateChanged.connect(self.maskChanged)
+            self.masksBoxes[maskKey].stateChanged.connect(self.pixelmaskChanged)
             vbox.addWidget(self.masksBoxes[maskKey])
         self.maskBox.vbox.addLayout(vbox)
 
@@ -213,20 +213,23 @@ class DatasetProp(QtGui.QWidget):
         self.setLayout(self.vbox)
         self.plots = 1
 
-    def setDataset(self,data):
+    def setDataset(self,dataset):
         self.imageStackGlobalScale.minimum = None
         self.imageStackGlobalScale.maximum = None
-
-        self.data = data
+        self.dataset = dataset
         string = "Dimensions: "
-        for d in data.shape:
+        for d in dataset.shape:
             string += str(d)+"x"
         string = string[:-1]
         self.dimensionality.setText(string)
-        self.datatype.setText("Data Type: %s" % (data.dtype.name))
-        self.datasize.setText("Data Size: %s" % sizeof_fmt(data.dtype.itemsize*reduce(mul,data.shape)))
-        self.dataform.setText("Data Form: %s" % data.form)
-        if(data.form == '2D Image Stack'):
+        self.datatype.setText("Data Type: %s" % (dataset.dtype.name))
+        self.datasize.setText("Data Size: %s" % sizeof_fmt(dataset.dtype.itemsize*reduce(mul,dataset.shape)))
+        if dataset.isCXIStack():
+            form = "%iD Data Stack" % dataset.getCXIFormat()
+        else:
+            form = "%iD Data" % dataset.getCXIFormat()
+        self.dataform.setText("Data form: %s" % form)
+        if dataset.isCXIStack():
             self.imageStackBox.show()
         else:
             self.imageStackBox.hide()
@@ -258,20 +261,15 @@ class DatasetProp(QtGui.QWidget):
         self.parent.view.clearTextures()
         self.parent.view.updateGL()
 
-    def maskChanged(self,value):
+    def pixelmaskChanged(self,value):
         self.displayChanged(value)
         
-    def maskPixelmaskRefreshItems(self):
+    def maskPixelmaskRefreshItems(self,dataset=None):
         self.maskPixelmask.clear()
         self.maskPixelmask.addItem("none")
-        if hasattr(self.parent,'CXINavigation'):
-            if self.parent.CXINavigation.CXITreeTop.currGroupName != None:
-                print self.parent.CXINavigation.CXITreeTop.f.items()
-                datasets = self.parent.CXINavigation.CXITreeTop.f[self.parent.CXINavigation.CXITreeTop.currGroupName].keys()
-                if 'mask_shared' in datasets:
-                    self.maskPixelmask.addItem("mask_shared")
-                    if 'mask' in datasets:
-                        self.maskPixelmask.addItem("mask")
+        if dataset != None:
+            for maskType in dataset.getCXIMasks.keys():
+                self.maskPixelmask.addItem(maskType)
 
     def clear(self):
         self.maskPixelmaskRefreshItems()
@@ -287,6 +285,7 @@ class DatasetProp(QtGui.QWidget):
             self.imageBox.show()
         else:
             self.parent.datasetProp.imageBox.hide()
+
 def paintColormapIcons(W,H):
     a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
     maps=[m for m in cm.datad if not m.endswith("_r")]
