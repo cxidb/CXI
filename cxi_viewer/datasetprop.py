@@ -285,6 +285,7 @@ class DatasetProp(QtGui.QWidget):
         self.maskPixelmask.addItem("none")
         if hasattr(self.parent,'CXINavigation'):
             if self.parent.CXINavigation.CXITreeTop.currGroupName != None:
+                print self.parent.CXINavigation.CXITreeTop.f.items()
                 datasets = self.parent.CXINavigation.CXITreeTop.f[self.parent.CXINavigation.CXITreeTop.currGroupName].keys()
                 if 'mask_shared' in datasets:
                     self.maskPixelmask.addItem("mask_shared")

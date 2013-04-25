@@ -7,6 +7,7 @@ import numpy
 class CXINavigation(QtGui.QWidget):
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
+        self.parent = parent
         self.vbox = QtGui.QVBoxLayout()
         self.setLayout(self.vbox)
 
@@ -48,6 +49,7 @@ class CXITree(QtGui.QTreeWidget):
         item = QtGui.QTreeWidgetItem([QtCore.QFileInfo(filename).fileName()])
         item.setToolTip(0,filename)
         root.addChild(item)
+        self.stackSize = self.f['/entry_1/data_1/data'].shape[0]
         self.buildBranch(self.f,item)
         #self.loadData1()
     def buildBranch(self,group,item):
@@ -59,7 +61,7 @@ class CXITree(QtGui.QTreeWidget):
                 self.buildBranch(group[g],child)
                 item.addChild(child)
             else:
-                if(not group[g].shape or reduce(mul,group[g].shape) < 10):
+                if(not group[g].shape):# or reduce(mul,group[g].shape) < 10):
                     lst.append(str(group[g][()]))
                     lst.append("")
                     child = QtGui.QTreeWidgetItem(lst)
@@ -71,23 +73,53 @@ class CXITree(QtGui.QTreeWidget):
                     string = "<i>"+ds_dtype+"</i> ("
                     for d in ds_shape:
                         string += str(d)+","
-                    string = string[:-3]
+                    string = string[:-1]
                     string += ")"
                     lst.append(group[g].name)
                     child = QtGui.QTreeWidgetItem(lst)
                     child.setToolTip(self.columnPath-1,string)
-                    if len(ds_shape) == 1:
+                    form = ""
+                    if ds_dtype[:6] == 'string':
+                            R = 100
+                            G = 100
+                            B = 100
+                            form += "String Data"
+                            if ds_shape[0] == self.stackSize:
+                                form += " Stack"
+                    else:
+                        if len(ds_shape) == 1:
+                            form += '1D Data'
+                            if ds_shape[0] == self.stackSize:
+                                form += " Stack"
+                        elif len(ds_shape) == 2: 
+                            if ds_shape[0] != self.stackSize:
+                                form += "2D Data"
+                            else:
+                                form += "1D Data Stack"
+                        elif len(ds_shape) == 3:
+                            if ds_shape[0] != self.stackSize:
+                                form += "3D Data"
+                            else:
+                                form += "2D Data Stack"
+                    if form[:2] == "1D":
+                        R = 0
+                        G = 100
+                        B = 0
+                    elif form[:2] == "2D":
                         R = 0
                         G = 0
-                        B = 120
-                    if len(ds_shape) == 2: 
-                        R = 0
-                        G = 120
-                        B = 0
-                    if len(ds_shape) == 3:
-                        R = 120
+                        B = 100
+                    elif form[:2] == "3D":
+                        R = 100
                         G = 0
                         B = 0
+                    print group[g].name,form[-5:]
+                    if form[-5:] == "Stack":
+                        fade = 70
+                        R += fade
+                        G += fade
+                        B += fade
+                    self.datasets[group[g].name].form = form
                     child.setForeground(0,QtGui.QBrush(QtGui.QColor(R,G,B)))
                     if g.rsplit("/",1)[-1] == 'data':
                         font = QtGui.QFont()
@@ -102,40 +134,28 @@ class CXITreeTop(CXITree):
     def handleClick(self,item,column):
         if(item.text(self.columnPath) != ""):
             self.currDatasetName = str(item.text(self.columnPath))
-            self.currGroupName = str(item.text(self.columnPath).rsplit("/",1)[0])
+            self.currGroupName = str(item.text(self.columnPath).rsplit("/",1)[-1])
             data = self.datasets[self.currDatasetName]
-            if(numpy.iscomplexobj(data[0])):
-                data = numpy.abs(data)
-            if(len(data.shape) == 1):
-                data.form = '1D Data'
+            # we shouldn't do this here:
+            #if(numpy.iscomplexobj(data[0])):
+            #    data = numpy.abs(data)
+            if data.form[:2] == "1D":
+                # 1D Plotting
                 pass
-            elif(len(data.shape) == 2): 
-#                self.parent.view.imshow(data)
-                data.form = '2D Image'
-                self.parent.datasetProp.clear()
-                self.parent.view.clear()
-                self.parent.view.loadImage(data)
-                print str(item.text(2))
-                self.parent.statusBar.showMessage("Loaded %s" % (str(item.text(self.columnPath))),1000)
-            elif(len(data.shape) == 3):
-                # Check for the axis attribute
-                if('axes' in self.datasets[str(item.text(self.columnPath))].attrs.keys() is not None):
-                    self.parent.datasetProp.clear()
-                    self.parent.view.clear()
-                    self.parent.view.loadStack(data)
-                    self.parent.statusBar.showMessage("Loaded slice 0",1000)
-                    data.form = '2D Image Stack'
-                else:
-                    wrnBox = QtGui.QMessageBox();
-                    wrnBox.setText("CXI Viewer currently does not support the visualization of 3D volumes.")
-                    wrnBox.setInformativeText('Please use an alternative such as LLNL\'s excelent <a href="http://llnl.gov/visit">VisIt</a>.')
-                    wrnBox.setIcon(QtGui.QMessageBox.Warning)
-                    wrnBox.exec_();
-                    return 
+            elif data.form == "2D Data":
+                self.parent.parent.datasetProp.clear()
+                self.parent.parent.view.clear()
+                self.parent.parent.view.loadImage(data)
+                self.parent.parent.statusBar.showMessage("Loaded %s" % (str(item.text(self.columnPath))),1000)
+            elif data.form == "2D Data Stack":
+                self.parent.parent.datasetProp.clear()
+                self.parent.parent.view.clear()
+                self.parent.parent.view.loadStack(data)
+                self.parent.parent.statusBar.showMessage("Loaded slice 0",1000)
             else:
                 QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets with more than 3 dimensions. The selected dataset has %d dimensions." %(len(data.shape))))
                 return
-            self.parent.datasetProp.setDataset(data);
+            self.parent.parent.datasetProp.setDataset(data);
     def loadData1(self):
         root = self.topLevelItem(0)
         root.setExpanded(True)
@@ -171,6 +191,6 @@ class CXITreeBottom(CXITree):
             else:
                 QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(data.shape))))
                 self.currentDataset = None
-            self.parent.view.loaderThread.setSortingIndices(self.currentDataset)
-            self.parent.view.clearTextures()
-            self.parent.view.updateGL()    
+            self.parent.parent.view.loaderThread.setSortingIndices(self.currentDataset)
+            self.parent.parent.view.clearTextures()
+            self.parent.parent.view.updateGL()    
