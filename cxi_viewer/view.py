@@ -97,11 +97,11 @@ class ImageLoader(QtCore.QObject):
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
     def setPixelmask(self,pixelmaskText="none"):
-        if hasattr(self.view.parent,'CXINavigation'):
-            if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
-                self.view.mask = self.view.parent.CXINavigation.CXITreeTop.f[self.view.parent.CXINavigation.CXITreeTop.currGroupName+'/'+pixelmaskText]
         if pixelmaskText == "none":
             self.view.mask = None
+        elif hasattr(self.view.parent,'CXINavigation'):
+            if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
+                self.view.mask = self.view.parent.CXINavigation.CXITreeTop.f[self.view.parent.CXINavigation.CXITreeTop.currGroupName+'/'+pixelmaskText]
         self.pixelmaskText = pixelmaskText
     def setMaskOutBits(self,value=0):
         self.maskOutBits = value
@@ -136,6 +136,7 @@ class ImageLoader(QtCore.QObject):
             elif self.view.parent.datasetProp.displayPow.isChecked():
                 self.setNorm('pow',vmin,vmax,)
             else: print "ERROR: No Scaling chosen."
+            print self.view.parent.datasetProp.maskPixelmask.currentText()
             self.setPixelmask(self.view.parent.datasetProp.maskPixelmask.currentText())
             maskOutBits = 0
             masksBoxes = self.view.parent.datasetProp.masksBoxes

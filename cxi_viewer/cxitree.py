@@ -78,7 +78,7 @@ class CXITree(QtGui.QTreeWidget):
                     lst.append(group[g].name)
                     child = QtGui.QTreeWidgetItem(lst)
                     child.setToolTip(self.columnPath-1,string)
-                    form = self.datasets[group[g].name].form = ""
+                    form = ""
                     if ds_dtype[:6] == 'string':
                             R = 100
                             G = 100
@@ -103,21 +103,23 @@ class CXITree(QtGui.QTreeWidget):
                                 form += "2D Data Stack"
                     if form[:2] == "1D":
                         R = 0
-                        G = 0
-                        B = 100
-                    elif form[:2] == "2D":
-                        R = 0
                         G = 100
                         B = 0
+                    elif form[:2] == "2D":
+                        R = 0
+                        G = 0
+                        B = 100
                     elif form[:2] == "3D":
                         R = 100
                         G = 0
                         B = 0
+                    print group[g].name,form[-5:]
                     if form[-5:] == "Stack":
                         fade = 70
                         R += fade
                         G += fade
                         B += fade
+                    self.datasets[group[g].name].form = form
                     child.setForeground(0,QtGui.QBrush(QtGui.QColor(R,G,B)))
                     if g.rsplit("/",1)[-1] == 'data':
                         font = QtGui.QFont()
@@ -189,6 +191,6 @@ class CXITreeBottom(CXITree):
             else:
                 QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(data.shape))))
                 self.currentDataset = None
-            self.parent.view.loaderThread.setSortingIndices(self.currentDataset)
-            self.parent.view.clearTextures()
-            self.parent.view.updateGL()    
+            self.parent.parent.view.loaderThread.setSortingIndices(self.currentDataset)
+            self.parent.parent.view.clearTextures()
+            self.parent.parent.view.updateGL()    
