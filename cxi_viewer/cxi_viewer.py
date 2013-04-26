@@ -142,13 +142,13 @@ class Viewer(QtGui.QMainWindow):
     def handleViewDatasetChanged(self,dataset):
         format = dataset.getCXIFormat()
         if format == 1:
-            if not isinstance(self.view,"View1D"):
-                self.view = self.View1D(self)
+            if not isinstance(self.view,View1D):
+                self.view = View1D(self)
             # 1D Plotting
             return
         elif format == 2:
-            if not isinstance(self.view,"View2D"):
-                self.view = self.View2D(self)
+            if not isinstance(self.view,View2D):
+                self.view = View2D(self)
             self.datasetProp.clear()
             self.view.clear()
             if dataset.isCXIStack():

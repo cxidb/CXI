@@ -73,8 +73,8 @@ class ImageLoader(QtCore.QObject):
         self.mappable.set_norm(norm)
         #self.mappable.set_clim(vmin,vmax)
 
-class View:
-    def __init_(self,parent=None):
+class View(object):
+    def __init__(self,parent=None):
         self.parent = parent
         self.setData()
         self.setMask()
@@ -118,7 +118,6 @@ class View1D(View,pyqtgraph.PlotWidget):
     def __init__(self,parent=None):
         View.__init__(self)
         pyqtgraph.PlotWidget.__init__(name="1D Graph")
-        
         
 
 class View2D(View,QtOpenGL.QGLWidget):
