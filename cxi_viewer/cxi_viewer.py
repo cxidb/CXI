@@ -144,6 +144,7 @@ class Viewer(QtGui.QMainWindow):
         if format == 1:
             if not isinstance(self.view,View1D):
                 self.view = View1D(self)
+                self.view.loadData(dataset)
             # 1D Plotting
             return
         elif format == 2:

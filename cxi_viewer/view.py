@@ -8,6 +8,59 @@ from matplotlib import colors
 from matplotlib import cm
 import pyqtgraph
 
+class View(object):
+    def __init__(self,parent=None):
+        self.parent = parent
+        self.setData()
+        self.setMask()
+        self.setSortingIndices()
+    # DATA
+    def setData(self,data=None):
+        self.data = data
+    def getData(self,nDims=2,img_sorted=0):
+        if self.data == None:
+            return None
+        elif nDims == 1:
+            return numpy.array(self.data).flatten()
+        elif nDims == 2:
+            if self.data.isCXIStack():
+                return numpy.array(self.data[img_sorted,:,:])
+            else:
+                return numpy.array(self.data[:,:])
+    # MASK
+    def setMask(self,maskDataset=None,maskOutBits=0):
+        self.mask = maskDataset
+        self.maskOutBits = maskOutBits
+    def getMask(self,nDims=2,img_sorted=0):
+        if self.mask == None:
+            return None
+        elif nDims == 2:
+            if self.mask[img_sorted].isCXIStack():
+                mask = self.mask[img_sorted,:,:]
+            else:
+                mask = self.mask[:,:]        
+            return ((mask & self.maskOutBits) == 0)
+    # SORTING
+    def setSortingIndices(self, data=None):
+        if data != None:
+            self.sortingIndices = numpy.argsort(data)
+        else:
+            self.sortingIndices = None
+    def getSortedIndex(self,index):
+        if self.sortingIndices != None:
+            return self.sortingIndices[index]
+        else:
+            return index
+
+class View1D(View,pyqtgraph.PlotWidget):
+    def __init__(self,parent=None):
+        View.__init__(self)
+        pyqtgraph.PlotWidget.__init__(name="1D Graph")
+    def loadData(self,dataset):
+        self.setData(dataset)
+
+
+
 class PowNorm(colors.Normalize):
     def __init__(self, gamma=1, vmin=None, vmax=None, clip=False):
         colors.Normalize.__init__(self,vmin,vmax,clip)
@@ -49,8 +102,8 @@ class ImageLoader(QtCore.QObject):
            return
         self.loaded[img] = True
         img_sorted = self.view.getSortedIndex(img)
-        data = self.view.getData(img_sorted)
-        mask = self.view.getMask(img_sorted)
+        data = self.view.getData(2,img_sorted)
+        mask = self.view.getMask(2,img_sorted)
         self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth(),4),dtype=numpy.uint8)
         self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
         if mask!=None:
@@ -73,52 +126,6 @@ class ImageLoader(QtCore.QObject):
         self.mappable.set_norm(norm)
         #self.mappable.set_clim(vmin,vmax)
 
-class View(object):
-    def __init__(self,parent=None):
-        self.parent = parent
-        self.setData()
-        self.setMask()
-        self.setSortingIndices()
-    # DATA
-    def setData(self,data=None):
-        self.data = data
-    def getData(self,img_sorted):
-        if self.data != None:
-            if self.data.isCXIStack():
-                return numpy.array(self.data[img_sorted,:,:])
-            else:
-                return numpy.array(self.data[:,:])
-        else:
-            return None
-    # MASK
-    def setMask(self,maskDataset=None,maskOutBits=0):
-        self.mask = maskDataset
-        self.maskOutBits = maskOutBits
-    def getMask(self,img_sorted):
-        if self.mask == None:
-            return None
-        if self.mask[img_sorted].isCXIStack():
-            mask = self.mask[img_sorted,:,:]
-        else:
-            mask = self.mask[:,:]        
-        return ((mask & self.maskOutBits) == 0)
-    # SORTING
-    def setSortingIndices(self, data=None):
-        if data != None:
-            self.sortingIndices = numpy.argsort(data)
-        else:
-            self.sortingIndices = None
-    def getSortedIndex(self,index):
-        if self.sortingIndices != None:
-            return self.sortingIndices[index]
-        else:
-            return index
-
-class View1D(View,pyqtgraph.PlotWidget):
-    def __init__(self,parent=None):
-        View.__init__(self)
-        pyqtgraph.PlotWidget.__init__(name="1D Graph")
-        
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
