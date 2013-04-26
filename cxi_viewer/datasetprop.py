@@ -2,6 +2,7 @@
 from PySide import QtGui, QtCore, QtOpenGL
 from operator import mul
 import numpy,ctypes
+import h5py
 from matplotlib import colors
 from matplotlib import cm
 #import pyqtgraph
@@ -14,6 +15,9 @@ def sizeof_fmt(num):
     return "%3.1f %s" % (num, 'TB')
     
 class DatasetProp(QtGui.QWidget):
+    maskChanged = QtCore.Signal(h5py.Dataset,int)
+    normChanged = QtCore.Signal(str,float,float,float)
+    colormapChanged = QtCore.Signal(str)
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
         self.parent = parent
@@ -56,20 +60,13 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(self.imageStackSubplots)
         self.imageStackBox.vbox.addLayout(hbox)
 
-        self.imageStackGlobalScale = QtGui.QCheckBox(parent=self)
-        self.imageStackGlobalScale.setText("Global Scale")
-        self.imageStackGlobalScale.stateChanged.connect(self.imageStackGlobalScaleChanged)
-        self.imageStackBox.vbox.addWidget(self.imageStackGlobalScale)
-        self.imageStackGlobalScale.minimum = None
-        self.imageStackGlobalScale.maximum = None
-
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Selected Image:"))
         self.imageStackImageSelected = QtGui.QLabel("None",parent=self)
         hbox.addWidget(self.imageStackImageSelected)
         self.imageStackBox.vbox.addLayout(hbox)
         
-        self.imageStackBox.hide()
+        self.clearDataset()
 
         self.displayBox = QtGui.QGroupBox("Display Properties");
         self.displayBox.vbox = QtGui.QVBoxLayout()
@@ -83,7 +80,6 @@ class DatasetProp(QtGui.QWidget):
         self.displayMax.setMaximum(1000000.)
         self.displayMax.setValue(10000.)
         self.displayMax.setSingleStep(100.)
-        self.displayMax.valueChanged.connect(self.displayChanged)
         hbox.addWidget(self.displayMax)
         self.displayBox.vbox.addLayout(hbox)
 
@@ -94,18 +90,14 @@ class DatasetProp(QtGui.QWidget):
         self.displayMin.setMaximum(1000000.)
         self.displayMin.setValue(0.)
         self.displayMin.setSingleStep(100.)
-        self.displayMin.valueChanged.connect(self.displayChanged)
         hbox.addWidget(self.displayMin)
         self.displayBox.vbox.addLayout(hbox)
 
         vbox = QtGui.QVBoxLayout()
         vbox.addWidget(QtGui.QLabel("Scaling:"))
         self.displayLin = QtGui.QRadioButton("Linear")
-        self.displayLin.toggled.connect(self.displayChanged)
         self.displayLog = QtGui.QRadioButton("Logarithmic")
-        self.displayLog.toggled.connect(self.displayChanged)
         self.displayPow = QtGui.QRadioButton("Power")
-        self.displayPow.toggled.connect(self.displayChanged)
         self.displayLog.setChecked(True)
         vbox.addWidget(self.displayLin)
         vbox.addWidget(self.displayLog)
@@ -114,12 +106,18 @@ class DatasetProp(QtGui.QWidget):
         self.displayGamma = QtGui.QDoubleSpinBox(parent=self)
         self.displayGamma.setValue(0.25);
         self.displayGamma.setSingleStep(0.25);
-        self.displayGamma.valueChanged.connect(self.displayChanged)
+        self.displayGamma.valueChanged.connect(self.emitNorm)
         hbox.addWidget(self.displayPow)
         hbox.addWidget(self.displayGamma)        
         vbox.addLayout(hbox)
         self.displayBox.vbox.addLayout(vbox)
-        
+
+        self.displayMax.valueChanged.connect(self.emitNorm)
+        self.displayMin.valueChanged.connect(self.emitNorm)
+        self.displayLin.toggled.connect(self.emitNorm)        
+        self.displayLog.toggled.connect(self.emitNorm)
+        self.displayPow.toggled.connect(self.emitNorm)
+
         icon_width = 256/2
         icon_height = 10
         colormapIcons = paintColormapIcons(icon_width,icon_height)
@@ -132,7 +130,7 @@ class DatasetProp(QtGui.QWidget):
         self.displayColormap.addItem(colormapIcons.pop('gray'),'gray')        
         for colormap in colormapIcons.keys():
             self.displayColormap.addItem(colormapIcons[colormap],colormap)
-        self.displayColormap.currentIndexChanged.connect(self.displayChanged)
+        self.displayColormap.currentIndexChanged.connect(self.emitColormap)
         hbox.addWidget(self.displayColormap)
         self.displayBox.vbox.addLayout(hbox)
 
@@ -143,12 +141,9 @@ class DatasetProp(QtGui.QWidget):
 
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Pixelmask:"))
-        self.maskPixelmask = QtGui.QComboBox(parent=self)
-        self.maskPixelmaskRefreshItems()
-        self.maskPixelmask.currentIndexChanged.connect(self.pixelmaskChanged)
-        hbox.addWidget(self.maskPixelmask)
+        self.maskMask = QtGui.QComboBox(parent=self)
+        hbox.addWidget(self.maskMask)
         self.maskBox.vbox.addLayout(hbox)
-        self.maskLoaded = "None"
 
         vbox = QtGui.QVBoxLayout()
         maskInvalidPix = QtGui.QCheckBox("Invalid",parent=self)    
@@ -173,10 +168,13 @@ class DatasetProp(QtGui.QWidget):
                            'resolution' : maskResolutionPix,
                            'missing' : maskMissingPix,
                            'halo' : maskHaloPix}
-        for maskKey in self.masksBoxes:
-            self.masksBoxes[maskKey].stateChanged.connect(self.pixelmaskChanged)
-            vbox.addWidget(self.masksBoxes[maskKey])
         self.maskBox.vbox.addLayout(vbox)
+
+        for maskKey in self.masksBoxes:
+            self.masksBoxes[maskKey].stateChanged.connect(self.emitMask)
+            vbox.addWidget(self.masksBoxes[maskKey])
+        self.clearMask()
+        self.maskMask.currentIndexChanged.connect(self.emitMask)
 
         self.maskBox.setLayout(self.maskBox.vbox)
 
@@ -213,67 +211,114 @@ class DatasetProp(QtGui.QWidget):
         self.setLayout(self.vbox)
         self.plots = 1
 
-    def setDataset(self,dataset):
-        self.imageStackGlobalScale.minimum = None
-        self.imageStackGlobalScale.maximum = None
+    def clear(self):
+        self.clearDataset()
+        self.clearMask()
+    # DATASET
+    def setDataset(self,dataset=None):
         self.dataset = dataset
-        string = "Dimensions: "
-        for d in dataset.shape:
-            string += str(d)+"x"
-        string = string[:-1]
-        self.dimensionality.setText(string)
-        self.datatype.setText("Data Type: %s" % (dataset.dtype.name))
-        self.datasize.setText("Data Size: %s" % sizeof_fmt(dataset.dtype.itemsize*reduce(mul,dataset.shape)))
-        if dataset.isCXIStack():
-            form = "%iD Data Stack" % dataset.getCXIFormat()
+        if dataset != None:
+            self.dataset = dataset
+            string = "Dimensions: "
+            for d in dataset.shape:
+                string += str(d)+"x"
+            string = string[:-1]
+            self.dimensionality.setText(string)
+            self.datatype.setText("Data Type: %s" % (dataset.dtype.name))
+            self.datasize.setText("Data Size: %s" % sizeof_fmt(dataset.dtype.itemsize*reduce(mul,dataset.shape)))
+            if dataset.isCXIStack():
+                form = "%iD Data Stack" % dataset.getCXIFormat()
+            else:
+                form = "%iD Data" % dataset.getCXIFormat()
+            self.dataform.setText("Data form: %s" % form)
+            if dataset.isCXIStack():
+                self.imageStackBox.show()
+            else:
+                self.imageStackBox.hide()
         else:
-            form = "%iD Data" % dataset.getCXIFormat()
-        self.dataform.setText("Data form: %s" % form)
-        if dataset.isCXIStack():
-            self.imageStackBox.show()
-        else:
-            self.imageStackBox.hide()
-
-            
+            self.clearDataset()
+        self.refreshMask()
     def clearDataset(self):
-        string = "Dimensions: "
-        self.dimensionality.setText(string)
+        self.dataset = None
+        self.dimensionality.setText("Dimensions: ")
         self.datatype.setText("Data Type: ")
         self.datasize.setText("Data Size: ")
         self.dataform.setText("Data Form: ")
         self.imageStackBox.hide()
-
-
+    # NORM
+    def emitNorm(self,foovalue=None):
+        self.setNorm()
+        self.normChanged.emit(self.scaling,self.vmin,self.vmax,self.gamma)
+    def setNorm(self):
+        self.vmin = self.displayMin.value()
+        self.vmax = self.displayMax.value()
+        self.scaling = self.getScaling()
+        self.gamma = self.displayGamma.value()
+        if self.scaling == "lin":
+            pass
+        elif self.scaling == "log" and (self.vmin > 0. and self.vmax > 0):
+            pass
+        elif self.scaling == "pow" and self.gamma < 1 and (self.vmin > 0. and self.vmax > 0):
+            pass
+        else:
+            self.vmin = 1.
+            self.vmax = 1000.
+        self.displayMin.setValue(self.vmin)
+        self.displayMax.setValue(self.vmax)
+    def getScaling(self):
+        if self.displayLin.isChecked():
+            return "lin"
+        elif self.displayLog.isChecked():
+            return "log"
+        else:
+            return "pow"
+    # COLORMAP
+    def emitColormap(self,foovalue=None):
+        self.colormap = self.displayColormap.currentText()
+        self.colormapChanged.emit(self.colormap)
+    # STACK
     def imageStackSubplotsChanged(self,plots):
         self.plots = plots
         self.parent.view.setStackWidth(plots)
 #        self.parent.view.clear()
-
-    def imageStackGlobalScaleChanged(self,state):
-        if(self.imageStackGlobalScale.minimum == None):
-            self.imageStackGlobalScale.minimum = numpy.min(self.data)
-        if(self.imageStackGlobalScale.maximum == None):
-            self.imageStackGlobalScale.maximum = numpy.max(self.data)
-        self.parent.view.clearTextures()
-        self.parent.view.updateGL()
-
-    def displayChanged(self,value):
-        self.parent.view.clearTextures()
-        self.parent.view.updateGL()
-
-    def pixelmaskChanged(self,value):
-        self.displayChanged(value)
-        
-    def maskPixelmaskRefreshItems(self,dataset=None):
-        self.maskPixelmask.clear()
-        self.maskPixelmask.addItem("none")
-        if dataset != None:
-            for maskType in dataset.getCXIMasks.keys():
-                self.maskPixelmask.addItem(maskType)
-
-    def clear(self):
-        self.maskPixelmaskRefreshItems()
-
+    # MASK
+    def clearMask(self):
+        self.maskMask.clear()
+        self.maskMask.addItem("none")
+        self.mask = None
+    def refreshMask(self):
+        self.clearMask()
+        if self.dataset != None:
+            for maskType in self.dataset.getCXIMasks().keys():
+                self.maskMask.addItem(maskType)
+    def setMaskMask(self):
+        maskText = self.maskMask.currentText()
+        if self.dataset != None and maskText != "none" and maskText != "":
+            self.mask = self.dataset.getCXIMasks()[maskText]
+        else:
+            self.mask = None
+    def setMaskBits(self):
+        PIXELMASK_BITS = {'perfect' : 0,# PIXEL_IS_PERFECT
+                          'invalid' : 1,# PIXEL_IS_INVALID
+                          'saturated' : 2,# PIXEL_IS_SATURATED
+                          'hot' : 4,# PIXEL_IS_HOT
+                          'dead' : 8,# PIXEL_IS_DEAD
+                          'shadowed' : 16, # PIXEL_IS_SHADOWED
+                          'peakmask' : 32, # PIXEL_IS_IN_PEAKMASK
+                          'ignore' : 64, # PIXEL_IS_TO_BE_IGNORED
+                          'bad' : 128, # PIXEL_IS_BAD
+                          'resolution' : 256, # PIXEL_IS_OUT_OF_RESOLUTION_LIMITS
+                          'missing' : 512, # PIXEL_IS_MISSING
+                          'halo' : 1024} # PIXEL_IS_IN_HALO
+        self.maskOutBits = 0
+        for maskKey in self.masksBoxes:
+            if self.masksBoxes[maskKey].isChecked():
+                self.maskOutBits |= PIXELMASK_BITS[maskKey]
+    def emitMask(self,foovalue=None):
+        self.setMaskMask()
+        self.setMaskBits()
+        self.maskChanged.emit(self.mask,self.maskOutBits)
+    # VIEW
     def onImageSelected(self,selectedImage):
         self.imageStackImageSelected.setText(str(selectedImage))
         if(selectedImage is not None):
@@ -285,6 +330,8 @@ class DatasetProp(QtGui.QWidget):
             self.imageBox.show()
         else:
             self.parent.datasetProp.imageBox.hide()
+            
+
 
 def paintColormapIcons(W,H):
     a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))

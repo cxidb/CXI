@@ -59,8 +59,9 @@ class Viewer(QtGui.QMainWindow):
 
         self.CXINavigation.CXITreeTop.datasetChanged.connect(self.handleViewDatasetChanged)
         self.CXINavigation.CXITreeBottom.datasetChanged.connect(self.handleSortDatasetChanged)
-
-        self.datasetProp.pixelmaskChanged(self.handlePixelmaskChanged)
+        self.datasetProp.maskChanged.connect(self.handleMaskChanged)
+        self.datasetProp.normChanged.connect(self.handleNormChanged)
+        self.datasetProp.colormapChanged.connect(self.handleColormapChanged)
 
     def after_show(self):
         if(len(sys.argv) > 1):
@@ -142,32 +143,41 @@ class Viewer(QtGui.QMainWindow):
         format = dataset.getCXIFormat()
         if format == 1:
             # 1D Plotting
-            pass
+            return
         elif format == 2:
-            if not dataset.isCXIStack():
-                self.datasetProp.clear()
-                self.view.clear()
-                self.view.loadImage(dataset)
-                self.statusBar.showMessage("Loaded %s" % (str(item.text(self.columnPath))),1000)
-            else:
-                self.datasetProp.clear()
-                self.view.clear()
+            self.datasetProp.clear()
+            self.view.clear()
+            if dataset.isCXIStack():
                 self.view.loadStack(dataset)
-                self.statusBar.showMessage("Loaded slice 0",1000)
+            else:
+                self.view.loadImage(dataset)
+            self.statusBar.showMessage("Loaded %s" % dataset.name,1000)
         elif format == 3:
             QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets of given shape. The selected dataset has %d dimensions." %(len(dataset.shape))))
             return
-        self.datasetProp.setDataset(dataset);
+        self.datasetProp.setDataset(dataset)
     def handleSortDatasetChanged(self,dataset):
         format = dataset.getCXIFormat()
         if(format == 1):
-            self.view.loaderThread.setSortingIndices(dataset)
+            self.view.setSortingIndices(dataset)
             self.view.clearTextures()
             self.view.updateGL()
         else:
             QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
-    def handlePixelmaskChanged(self,pixelmask):
-        pass
+    def handleMaskChanged(self,mask,maskOutBits):
+        self.view.setMask(mask,maskOutBits)
+        self.view.clearTextures()
+        self.view.updateGL()
+    def handleNormChanged(self,scaling,vmin,vmax,gamma):
+        self.view.loaderThread.setNorm(scaling,vmin,vmax,gamma)
+        self.view.clearTextures()
+        self.view.updateGL()
+    def handleColormapChanged(self,colormap):
+        self.view.loaderThread.setColormap(colormap)
+        self.view.clearTextures()
+        self.view.updateGL()
+
+        
 
    
 class PreferencesDialog(QtGui.QDialog):

@@ -29,7 +29,18 @@ def getCXIMasks(dataset):
             masks[maskType] = dataset.parent[maskType]
     return masks
 h5py.Dataset.getCXIMasks = getCXIMasks
-
+def getCXIWidth(dataset):
+    if dataset.isCXIStack():
+        return dataset.shape[2]
+    else:
+        return dataset.shape[1]
+h5py.Dataset.getCXIWidth = getCXIWidth
+def getCXIHeight(dataset):
+    if dataset.isCXIStack():
+        return dataset.shape[1]
+    else:
+        return dataset.shape[0]
+h5py.Dataset.getCXIHeight = getCXIHeight
 
 class CXINavigation(QtGui.QWidget):
     def __init__(self,parent=None):
