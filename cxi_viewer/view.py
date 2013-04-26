@@ -17,6 +17,10 @@ class View(object):
     # DATA
     def setData(self,data=None):
         self.data = data
+        if self.data != None:
+            self.has_data = True
+        else:
+            self.has_data = False
     def getData(self,nDims=2,img_sorted=0):
         if self.data == None:
             return None
@@ -35,7 +39,7 @@ class View(object):
         if self.mask == None:
             return None
         elif nDims == 2:
-            if self.mask[img_sorted].isCXIStack():
+            if self.mask.isCXIStack():
                 mask = self.mask[img_sorted,:,:]
             else:
                 mask = self.mask[:,:]        
@@ -125,7 +129,6 @@ class ImageLoader(QtCore.QObject):
         self.normScaling = scaling
         self.mappable.set_norm(norm)
         #self.mappable.set_clim(vmin,vmax)
-
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
@@ -400,12 +403,10 @@ class View2D(View,QtOpenGL.QGLWidget):
         pass
     def loadStack(self,data):
         self.setData(data)
-        self.has_data = True
         self.setStackWidth(self.stackWidth)
     def loadImage(self,data):
         if(data.getCXIFormat() == 2):        
             self.setData(data)
-            self.has_data = True
             self.setStackWidth(self.stackWidth)
         else:
             print "3D images not supported."
@@ -655,16 +656,13 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.setData()
         self.setMask()
         self.setSortingIndices()
-        self.has_data = False
-        self.data = {}
         self.clearLoaderThread.emit(0)
         self.clearTextures()
         self.updateGL()
     def clearTextures(self):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
-        #self.loaderThread.clear()
-        #self.loaderThread.update()
+        self.clearLoaderThread.emit(0)
     def setStackWidth(self,width):  
         ratio = float(self.stackWidth)/width 
         self.stackWidth = width 

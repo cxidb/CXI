@@ -25,7 +25,7 @@ def getCXIMasks(dataset):
     masks = {}
     suppMaskTypes = ["mask_shared","mask"]
     for maskType in suppMaskTypes:
-        if maskType in dataset.parent.items():
+        if maskType in dataset.parent.keys():
             masks[maskType] = dataset.parent[maskType]
     return masks
 h5py.Dataset.getCXIMasks = getCXIMasks
