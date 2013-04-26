@@ -6,7 +6,7 @@ import numpy
 import math
 from matplotlib import colors
 from matplotlib import cm
-import pyqtgraph
+#import pyqtgraph
 
 class View(object):
     def __init__(self,parent=None):
@@ -52,12 +52,12 @@ class View(object):
         else:
             return index
 
-class View1D(View,pyqtgraph.PlotWidget):
+class View1D(View):#,pyqtgraph.PlotWidget):
     def __init__(self,parent=None):
         View.__init__(self)
-        pyqtgraph.PlotWidget.__init__(name="1D Graph")
-    def loadData(self,dataset):
-        self.setData(dataset)
+        #pyqtgraph.PlotWidget.__init__(self,name="1D Graph")
+    #def loadData(self,dataset):
+    #    self.setData(dataset)
 
 
 
@@ -544,7 +544,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         if(self.dragging):
             self.translation[1] -= (event.pos()-self.dragPos).y()
             self.clipTranslation()
-            if(self.data.getCXIFormat() != 2 or (QtGui.QApplication.keyboardModifiers().__and__(QtCore.Qt.ControlModifier))):
+            if(QtGui.QApplication.keyboardModifiers().__and__(QtCore.Qt.ControlModifier)):
                self.translation[0] += (event.pos()-self.dragPos).x()
             self.dragPos = event.pos()
             self.updateGL()

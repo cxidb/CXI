@@ -143,12 +143,12 @@ class Viewer(QtGui.QMainWindow):
         format = dataset.getCXIFormat()
         if format == 1:
             if not isinstance(self.view,View1D):
+                self.view.clear()
                 self.view = View1D(self)
-                self.view.loadData(dataset)
-            # 1D Plotting
-            return
+            self.view.loadData(dataset)
         elif format == 2:
             if not isinstance(self.view,View2D):
+                self.view.clear()
                 self.view = View2D(self)
             self.datasetProp.clear()
             self.view.clear()
