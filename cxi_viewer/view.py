@@ -73,24 +73,59 @@ class ImageLoader(QtCore.QObject):
         self.mappable.set_norm(norm)
         #self.mappable.set_clim(vmin,vmax)
 
-#class View:
-#    def __init_(self,parent=None):
+class View:
+    def __init_(self,parent=None):
+        self.parent = parent
+        self.setData()
+        self.setMask()
+        self.setSortingIndices()
+    # DATA
+    def setData(self,data=None):
+        self.data = data
+    def getData(self,img_sorted):
+        if self.data != None:
+            if self.data.isCXIStack():
+                return numpy.array(self.data[img_sorted,:,:])
+            else:
+                return numpy.array(self.data[:,:])
+        else:
+            return None
+    # MASK
+    def setMask(self,maskDataset=None,maskOutBits=0):
+        self.mask = maskDataset
+        self.maskOutBits = maskOutBits
+    def getMask(self,img_sorted):
+        if self.mask == None:
+            return None
+        if self.mask[img_sorted].isCXIStack():
+            mask = self.mask[img_sorted,:,:]
+        else:
+            mask = self.mask[:,:]        
+        return ((mask & self.maskOutBits) == 0)
+    # SORTING
+    def setSortingIndices(self, data=None):
+        if data != None:
+            self.sortingIndices = numpy.argsort(data)
+        else:
+            self.sortingIndices = None
+    def getSortedIndex(self,index):
+        if self.sortingIndices != None:
+            return self.sortingIndices[index]
+        else:
+            return index
+
+class View1D(View,pyqtgraph.PlotWidget):
+    def __init__(self,parent=None):
+        View.__init__(self)
+        pyqtgraph.PlotWidget.__init__(name="1D Graph")
+        
         
 
-
-#class View1D(View,pyqtgraph.PlotWidget):
-#    def __init__(self,parent=None):
-#        View.__init__(self)
-#        pyqtgraph.PlotWidget.__init__(name="1D Graph")
-        
-        
-
-#class View2D(View,QtOpenGL.QGLWidget):
-class View(QtOpenGL.QGLWidget):
+class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
     clearLoaderThread = QtCore.Signal(int)
     def __init__(self,parent=None):
-        #View.__init__(self)
+        View.__init__(self,parent)
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
         self.zoom = 4.0
@@ -107,11 +142,8 @@ class View(QtOpenGL.QGLWidget):
         self.selectedImage = None
         self.lastHoveredImage = None
         self.stackWidth = 1;
-        self.imageData = {}
         self.has_data = False
-        self.setData()
-        self.setMask()
-        self.setSortingIndices()
+        self.imageData = {}
 
         self.loaderThread = ImageLoader(None,self)
         self.needsImage.connect(self.loaderThread.loadImage)
@@ -648,52 +680,3 @@ class View(QtOpenGL.QGLWidget):
     def displayChanged(self,foovalue=None):
         self.clearTextures()
         self.updateGL()
-    # DATA
-    def setData(self,data=None):
-        self.data = data
-    def getData(self,img_sorted):
-        if self.data != None:
-            if self.data.isCXIStack():
-                return numpy.array(self.data[img_sorted,:,:])
-            else:
-                return numpy.array(self.data[:,:])
-        else:
-            return None
-    # MASK
-    def setMask(self,maskDataset=None,maskOutBits=0):
-        self.mask = maskDataset
-        self.maskOutBits = maskOutBits
-    def getMask(self,img_sorted):
-        if self.mask == None:
-            return None
-        if self.mask[img_sorted].isCXIStack():
-            mask = self.mask[img_sorted,:,:]
-        else:
-            mask = self.mask[:,:]        
-        return ((mask & self.maskOutBits) == 0)
-    # SORTING
-    def setSortingIndices(self, data=None):
-        if data != None:
-            self.sortingIndices = numpy.argsort(data)
-        else:
-            self.sortingIndices = None
-    def getSortedIndex(self,index):
-        if self.sortingIndices != None:
-            return self.sortingIndices[index]
-        else:
-            return index
-
-
-
-PIXELMASK_BITS = {'perfect' : 0,# PIXEL_IS_PERFECT
-                  'invalid' : 1,# PIXEL_IS_INVALID
-                  'saturated' : 2,# PIXEL_IS_SATURATED
-                  'hot' : 4,# PIXEL_IS_HOT
-                  'dead' : 8,# PIXEL_IS_DEAD
-                  'shadowed' : 16, # PIXEL_IS_SHADOWED
-                  'peakmask' : 32, # PIXEL_IS_IN_PEAKMASK
-                  'ignore' : 64, # PIXEL_IS_TO_BE_IGNORED
-                  'bad' : 128, # PIXEL_IS_BAD
-                  'resolution' : 256, # PIXEL_IS_OUT_OF_RESOLUTION_LIMITS
-                  'missing' : 512, # PIXEL_IS_MISSING
-                  'halo' : 1024} # PIXEL_IS_IN_HALO
