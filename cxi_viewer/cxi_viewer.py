@@ -59,10 +59,7 @@ class Viewer(QtGui.QMainWindow):
 
         self.CXINavigation.CXITreeTop.datasetChanged.connect(self.handleViewDatasetChanged)
         self.CXINavigation.CXITreeBottom.datasetChanged.connect(self.handleSortDatasetChanged)
-        self.datasetProp.maskChanged.connect(self.handleMaskChanged)
-        self.datasetProp.normChanged.connect(self.handleNormChanged)
-        self.datasetProp.colormapChanged.connect(self.handleColormapChanged)
-        self.datasetProp.imageStackSubplotsChanged.connect(self.handleImageStackSubplotsChanged)
+        self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
 
     def after_show(self):
         if(len(sys.argv) > 1):
@@ -170,20 +167,9 @@ class Viewer(QtGui.QMainWindow):
             self.view.updateGL()
         else:
             QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
-    def handleMaskChanged(self,mask,maskOutBits):
-        self.view.setMask(mask,maskOutBits)
-        self.view.clearTextures()
-        self.view.updateGL()
-    def handleNormChanged(self,scaling,vmin,vmax,gamma):
-        self.view.loaderThread.setNorm(scaling,vmin,vmax,gamma)
-        self.view.clearTextures()
-        self.view.updateGL()
-    def handleColormapChanged(self,colormap):
-        self.view.loaderThread.setColormap(colormap)
-        self.view.clearTextures()
-        self.view.updateGL()
-    def handleImageStackSubplotsChanged(self,plots):
-        self.view.setStackWidth(plots) 
+    def handleDisplayPropChanged(self,prop):
+        if isinstance(self.view,View2D):
+            self.view.refreshDisplayProp(prop)
 
         
 

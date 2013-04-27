@@ -60,8 +60,8 @@ class View1D(View,pyqtgraph.PlotWidget):
     def __init__(self,parent=None):
         View.__init__(self,parent)
         pyqtgraph.PlotWidget.__init__(self,parent)
-    #def loadData(self,dataset):
-    #    self.setData(dataset)
+    def loadData(self,dataset):
+        self.setData(dataset)
 
 
 class FunctionNorm(colors.Normalize):
@@ -125,7 +125,7 @@ class ImageLoader(QtCore.QObject):
     # COLORMAP
     def setColormap(self,colormapName='jet'):
         self.mappable.set_cmap(colormapName)
-    def setNorm(self,scaling='log',vmin=1.,vmax=10000.,gamma=1):
+    def setNorm(self,scaling='log',vmin=1.,vmax=10000.,clip=True,gamma=1):
         self.normScaling = scaling
         if scaling == 'lin':
             f = lambda x: x
@@ -134,7 +134,7 @@ class ImageLoader(QtCore.QObject):
             f = lambda x: x**gamma
         elif scaling == 'log':
             f = lambda x: numpy.log10(x)
-        norm = FunctionNorm(f,vmin,vmax,True)
+        norm = FunctionNorm(f,vmin,vmax,clip)
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
 
@@ -209,8 +209,9 @@ class View2D(View,QtOpenGL.QGLWidget):
         Resize the GL window 
         '''
         if(self.has_data):
-            self.setStackWidth(self.stackWidth) 
-
+            self.setStackWidth(self.stackWidth)
+            self.clearTextures()
+            self.updateGL()
         glViewport(0, 0, w, h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -416,6 +417,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         if(data.getCXIFormat() == 2):        
             self.setData(data)
             self.setStackWidth(self.stackWidth)
+            self.clearTextrures()
+            self.updateGL()
         else:
             print "3D images not supported."
             sys.exit(-1)
@@ -683,12 +686,20 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.zoomFromStackWidth(width)            
         self.translation[1] = (self.translation[1] + self.height()/2.0)*ratio-self.height()/2.0
         self.clipTranslation()
-        self.parent.view.updateGL()
     def stackSceneWidth(self,width):
         return 
     def subplotSceneBorder(self):
         return self.subplotBorder/self.zoom
-
-    def displayChanged(self,foovalue=None):
+    def refreshDisplayProp(self,datasetProp):
+        if datasetProp != None:
+            self.setMask(datasetProp["maskDataset"],datasetProp["maskOutBits"])
+            self.loaderThread.setNorm(datasetProp["normScaling"],datasetProp["normVmin"],datasetProp["normVmax"],datasetProp["normClip"],datasetProp["normGamma"])
+            self.loaderThread.setColormap(datasetProp["colormapText"])
+            self.setStackWidth(datasetProp["imageStackSubplotsValue"])
         self.clearTextures()
         self.updateGL()
+        
+
+
+
+
