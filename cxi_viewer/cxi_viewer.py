@@ -62,6 +62,7 @@ class Viewer(QtGui.QMainWindow):
         self.datasetProp.maskChanged.connect(self.handleMaskChanged)
         self.datasetProp.normChanged.connect(self.handleNormChanged)
         self.datasetProp.colormapChanged.connect(self.handleColormapChanged)
+        self.datasetProp.imageStackSubplotsChanged.connect(self.handleImageStackSubplotsChanged)
 
     def after_show(self):
         if(len(sys.argv) > 1):
@@ -181,6 +182,8 @@ class Viewer(QtGui.QMainWindow):
         self.view.loaderThread.setColormap(colormap)
         self.view.clearTextures()
         self.view.updateGL()
+    def handleImageStackSubplotsChanged(self,plots):
+        self.view.setStackWidth(plots) 
 
         
 

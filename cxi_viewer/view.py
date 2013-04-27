@@ -6,7 +6,7 @@ import numpy
 import math
 from matplotlib import colors
 from matplotlib import cm
-#import pyqtgraph
+import pyqtgraph
 
 class View(object):
     def __init__(self,parent=None):
@@ -56,10 +56,10 @@ class View(object):
         else:
             return index
 
-class View1D(View):#,pyqtgraph.PlotWidget):
+class View1D(View,pyqtgraph.PlotWidget):
     def __init__(self,parent=None):
-        View.__init__(self)
-        #pyqtgraph.PlotWidget.__init__(self,name="1D Graph")
+        View.__init__(self,parent)
+        pyqtgraph.PlotWidget.__init__(self,parent)
     #def loadData(self,dataset):
     #    self.setData(dataset)
 
@@ -75,7 +75,6 @@ class FunctionNorm(colors.Normalize):
         mask = numpy.isfinite(value_clipped) == False
         fvmin = self.function(self.vmin)
         fvmax = self.function(self.vmax)
-        print self.vmin,fvmin,self.vmax,fvmax
         # check validity of given vmin and vmax
         if self.vmin > self.vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
             return numpy.ma.array(zeros_like(value),mask=ones_like(value),fill_value=1e+20)
