@@ -64,30 +64,38 @@ class View1D(View):#,pyqtgraph.PlotWidget):
     #    self.setData(dataset)
 
 
-
-class PowNorm(colors.Normalize):
-    def __init__(self, gamma=1, vmin=None, vmax=None, clip=False):
+class FunctionNorm(colors.Normalize):
+    def __init__(self, normFunction, vmin=None, vmax=None, clip=False):
         colors.Normalize.__init__(self,vmin,vmax,clip)
-        self.gamma = gamma
+        self.function = normFunction
         self.clip = clip
     def __call__(self,value,clip=None):
         clip = self.clip
-        outvalue = value.copy()
-        mask = (False==numpy.isfinite(outvalue))
-        above = value > self.vmax
+        value_clipped = numpy.array(value,dtype="float")
+        mask = numpy.isfinite(value_clipped) == False
+        fvmin = self.function(self.vmin)
+        fvmax = self.function(self.vmax)
+        print self.vmin,fvmin,self.vmax,fvmax
+        # check validity of given vmin and vmax
+        if self.vmin > self.vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
+            return numpy.ma.array(zeros_like(value),mask=ones_like(value),fill_value=1e+20)
+        # clipping / masking for values out of range
+        above = value_clipped > self.vmax
         if above.sum() > 0:
-            if clip: outvalue[above] = self.vmax
+            if clip: value_clipped[above] = self.vmax
             else: mask |= above
-        below = value < self.vmin
+        below = value_clipped < self.vmin
         if below.sum() > 0:
-            if clip: outvalue[below] = self.vmin
+            if clip: value_clipped[below] = self.vmin
             else: mask |= below
-        if self.gamma < 1:
-            below = value < 0
-            if below.sum() > 0:
-                if clip: outvalue[below] = 0
-                else: mask |= below
-        outvalue = outvalue**self.gamma/self.vmax**self.gamma
+        # apply norm function
+        outvalue = self.function(value_clipped)
+        # masking for invalid values
+        invalid = numpy.isfinite(outvalue) == False
+        if invalid.sum() > 0:
+            mask |= invalid
+        # scale to interval 0 to 1
+        outvalue = (outvalue-fvmin)/(fvmax-fvmin)
         return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
 
 class ImageLoader(QtCore.QObject):
@@ -119,16 +127,17 @@ class ImageLoader(QtCore.QObject):
     def setColormap(self,colormapName='jet'):
         self.mappable.set_cmap(colormapName)
     def setNorm(self,scaling='log',vmin=1.,vmax=10000.,gamma=1):
+        self.normScaling = scaling
         if scaling == 'lin':
-            norm = colors.Normalize(vmin,vmax,True)
+            f = lambda x: x
         elif scaling == 'pow':
             gamma = self.view.parent.datasetProp.displayGamma.value()
-            norm = PowNorm(gamma,vmin,vmax,True)
+            f = lambda x: x**gamma
         elif scaling == 'log':
-            norm = colors.LogNorm(vmin,vmax,True)
-        self.normScaling = scaling
+            f = lambda x: numpy.log10(x)
+        norm = FunctionNorm(f,vmin,vmax,True)
         self.mappable.set_norm(norm)
-        #self.mappable.set_clim(vmin,vmax)
+        self.mappable.set_clim(vmin,vmax)
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
