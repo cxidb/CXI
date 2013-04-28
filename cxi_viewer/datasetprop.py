@@ -25,7 +25,7 @@ class DatasetProp(QtGui.QWidget):
     displayPropChanged = QtCore.Signal(dict)
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
-        self.parent = parent
+        self.viewer = parent
         self.currDisplayProp = {}
         self.vbox = QtGui.QVBoxLayout()
         # scrolling
@@ -112,6 +112,11 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(QtGui.QLabel("Clip"))
         self.displayClip = QtGui.QCheckBox("",parent=self)
         hbox.addWidget(self.displayClip)
+        hbox.addStretch()
+        self.displayColormap = QtGui.QPushButton("Colormap",parent=self)
+        self.displayColormap.setMenu(self.viewer.colormapMenu)
+        hbox.addWidget(self.displayColormap)
+
         self.displayBox.vbox.addLayout(hbox)
         # normText
         vbox = QtGui.QVBoxLayout()
@@ -130,23 +135,8 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(self.displayGamma)        
         vbox.addLayout(hbox)
         self.displayBox.vbox.addLayout(vbox)
-        # property: COLORMAP
-        # colormap
-        icon_width = 256/2
-        icon_height = 10
-        colormapIcons = paintColormapIcons(icon_width,icon_height)
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Colormap:"))
-        self.displayColormap = QtGui.QComboBox(parent=self)
-        self.displayColormap.setIconSize(QtCore.QSize(icon_width,icon_height))
-        self.displayColormap.addItem(colormapIcons.pop('jet'),'jet')
-        self.displayColormap.addItem(colormapIcons.pop('hot'),'hot')        
-        self.displayColormap.addItem(colormapIcons.pop('gray'),'gray')        
-        for colormap in colormapIcons.keys():
-            self.displayColormap.addItem(colormapIcons[colormap],colormap)
-        hbox.addWidget(self.displayColormap)
-        self.displayBox.vbox.addLayout(hbox)
         self.displayBox.setLayout(self.displayBox.vbox)
+
         # property: MASK
         # maskMask
         self.maskBox = QtGui.QGroupBox("Mask out pixels");
@@ -200,20 +190,6 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(self.imageSum)
         self.imageBox.vbox.addLayout(hbox)
 
-#         hbox = QtGui.QHBoxLayout()
-#         hbox.addWidget(QtGui.QLabel("Display Range:"))
-#         self.displayMin = QtGui.QDoubleSpinBox(parent=self)
-#         self.displayMin.editingFinished.connect(self.displayChanged)
-#         self.displayMax = QtGui.QDoubleSpinBox(parent=self)
-#         self.displayMax.editingFinished.connect(self.displayChanged)
-#         hbox.addWidget(self.displayMin)
-#         hbox.addWidget(QtGui.QLabel("to"))
-#         hbox.addWidget(self.displayMax)    
-#         self.imageBox.vbox.addLayout(hbox)
-    
-
-
-
         self.imageBox.hide()
         # add all widgets to main vbox
         self.vboxScroll.addWidget(self.generalBox)
@@ -234,7 +210,8 @@ class DatasetProp(QtGui.QWidget):
         self.displayLog.toggled.connect(self.emitDisplayProp)
         self.displayPow.toggled.connect(self.emitDisplayProp)
         self.displayGamma.editingFinished.connect(self.emitDisplayProp)
-        self.displayColormap.currentIndexChanged.connect(self.emitDisplayProp)
+        self.viewer.colormapActionGroup.triggered.connect(self.emitDisplayProp)
+#        self.displayColormap.released.connect(self.emitDisplayProp)
         for maskKey in self.masksBoxes:
             self.masksBoxes[maskKey].stateChanged.connect(self.emitDisplayProp)
         self.maskMask.currentIndexChanged.connect(self.emitDisplayProp)
@@ -295,7 +272,7 @@ class DatasetProp(QtGui.QWidget):
             self.intensityHistogram.autoRange()
             self.intensityHistogramRegion = region
         else:
-            self.parent.datasetProp.imageBox.hide()
+            self.imageBox.hide()
     def onHistogramClicked(self,region):
         (min,max) = region.getRegion()
         self.displayMin.setValue(min)
@@ -336,9 +313,13 @@ class DatasetProp(QtGui.QWidget):
     # COLORMAP
     def setColormap(self,foovalue=None):
         P = self.currDisplayProp
-        P["colormapText"] = self.displayColormap.currentText()
+        a = self.viewer.colormapActionGroup.checkedAction()
+        self.displayColormap.setText(a.text())        
+        self.displayColormap.setIcon(a.icon())        
+        P["colormapText"] = a.text()
+
     def clearColormap(self):
-        self.displayColormap.setCurrentIndex(0)
+#        self.displayColormap.setCurrentIndex(0)
         self.setColormap()
     # STACK
     def setImageStackSubplots(self,foovalue=None):
