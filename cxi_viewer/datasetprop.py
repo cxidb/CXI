@@ -5,7 +5,7 @@ import numpy,ctypes
 import h5py
 from matplotlib import colors
 from matplotlib import cm
-#import pyqtgraph
+import pyqtgraph
 
 def sizeof_fmt(num):
     for x in ['bytes','kB','MB','GB']:
@@ -25,6 +25,7 @@ class DatasetProp(QtGui.QWidget):
     displayPropChanged = QtCore.Signal(dict)
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
+        self.viewer = parent
         # this dict holds all current settings
         self.currDisplayProp = {}
         self.vbox = QtGui.QVBoxLayout()
@@ -73,7 +74,20 @@ class DatasetProp(QtGui.QWidget):
         # DISPLAY PROPERTIES
         self.displayBox = QtGui.QGroupBox("Display Properties");
         self.displayBox.vbox = QtGui.QVBoxLayout()
-        # property: NORM
+
+        self.intensityHistogram = pyqtgraph.PlotWidget()
+        self.intensityHistogram.hideAxis('left')
+        self.intensityHistogram.hideAxis('bottom')
+        self.intensityHistogram.setFixedHeight(50)
+        region = pyqtgraph.LinearRegionItem(values=[0,1],brush="#ffffff15")
+        self.intensityHistogram.addItem(region)
+        self.intensityHistogram.autoRange()
+        self.intensityHistogramRegion = region
+
+        # Make the histogram fit the available width
+        self.intensityHistogram.setSizePolicy(QtGui.QSizePolicy.Ignored,QtGui.QSizePolicy.Preferred)
+        self.displayBox.vbox.addWidget(self.intensityHistogram)
+        # property: NORM        
         # normVmax
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Maximum value:"))
@@ -92,11 +106,18 @@ class DatasetProp(QtGui.QWidget):
         self.displayMin.setSingleStep(1.)
         hbox.addWidget(self.displayMin)
         self.displayBox.vbox.addLayout(hbox)
+
+
         # normClip
         hbox = QtGui.QHBoxLayout()
         hbox.addWidget(QtGui.QLabel("Clip"))
         self.displayClip = QtGui.QCheckBox("",parent=self)
         hbox.addWidget(self.displayClip)
+        hbox.addStretch()
+        self.displayColormap = QtGui.QPushButton("Colormap",parent=self)
+        self.displayColormap.setMenu(self.viewer.colormapMenu)
+        hbox.addWidget(self.displayColormap)
+
         self.displayBox.vbox.addLayout(hbox)
         # normText
         vbox = QtGui.QVBoxLayout()
@@ -115,23 +136,8 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(self.displayGamma)        
         vbox.addLayout(hbox)
         self.displayBox.vbox.addLayout(vbox)
-        # property: COLORMAP
-        # colormap
-        icon_width = 256/2
-        icon_height = 10
-        colormapIcons = paintColormapIcons(icon_width,icon_height)
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Colormap:"))
-        self.displayColormap = QtGui.QComboBox(parent=self)
-        self.displayColormap.setIconSize(QtCore.QSize(icon_width,icon_height))
-        self.displayColormap.addItem(colormapIcons.pop('jet'),'jet')
-        self.displayColormap.addItem(colormapIcons.pop('hot'),'hot')        
-        self.displayColormap.addItem(colormapIcons.pop('gray'),'gray')        
-        for colormap in colormapIcons.keys():
-            self.displayColormap.addItem(colormapIcons[colormap],colormap)
-        hbox.addWidget(self.displayColormap)
-        self.displayBox.vbox.addLayout(hbox)
         self.displayBox.setLayout(self.displayBox.vbox)
+
         # property: MASK
         # maskMask
         self.maskBox = QtGui.QGroupBox("Mask out pixels");
@@ -173,21 +179,18 @@ class DatasetProp(QtGui.QWidget):
         self.imageBox = QtGui.QGroupBox("Image Properties");
         self.imageBox.vbox = QtGui.QVBoxLayout()
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Max:"))
-        self.imageMax = QtGui.QLabel("None",parent=self)
-        hbox.addWidget(self.imageMax)
+        hbox.addWidget(QtGui.QLabel("Image Range:"))
+        self.imageRange = QtGui.QLabel("None",parent=self)
+        hbox.addWidget(self.imageRange)
         self.imageBox.vbox.addLayout(hbox)
         self.imageBox.setLayout(self.imageBox.vbox)
+
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Min:"))
-        self.imageMin = QtGui.QLabel("None",parent=self)
-        hbox.addWidget(self.imageMin)
-        self.imageBox.vbox.addLayout(hbox)
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Sum:"))
+        hbox.addWidget(QtGui.QLabel("Image Sum:"))
         self.imageSum = QtGui.QLabel("None",parent=self)
         hbox.addWidget(self.imageSum)
         self.imageBox.vbox.addLayout(hbox)
+
         self.imageBox.hide()
         # add all widgets to main vbox
         self.vboxScroll.addWidget(self.generalBox)
@@ -201,14 +204,15 @@ class DatasetProp(QtGui.QWidget):
         self.clear()
         # connect signals
         self.imageStackSubplots.valueChanged.connect(self.emitDisplayProp)    
-        self.displayMax.valueChanged.connect(self.emitDisplayProp)
-        self.displayMin.valueChanged.connect(self.emitDisplayProp)
+        self.displayMax.editingFinished.connect(self.emitDisplayProp)
+        self.displayMin.editingFinished.connect(self.emitDisplayProp)
         self.displayClip.stateChanged.connect(self.emitDisplayProp)
         self.displayLin.toggled.connect(self.emitDisplayProp)        
         self.displayLog.toggled.connect(self.emitDisplayProp)
         self.displayPow.toggled.connect(self.emitDisplayProp)
-        self.displayGamma.valueChanged.connect(self.emitDisplayProp)
-        self.displayColormap.currentIndexChanged.connect(self.emitDisplayProp)
+        self.displayGamma.editingFinished.connect(self.emitDisplayProp)
+        self.viewer.colormapActionGroup.triggered.connect(self.emitDisplayProp)
+#        self.displayColormap.released.connect(self.emitDisplayProp)
         for maskKey in self.masksBoxes:
             self.masksBoxes[maskKey].stateChanged.connect(self.emitDisplayProp)
         self.maskMask.currentIndexChanged.connect(self.emitDisplayProp)
@@ -255,12 +259,26 @@ class DatasetProp(QtGui.QWidget):
     def onImageSelected(self,selectedImage):
         self.imageStackImageSelected.setText(str(selectedImage))
         if(selectedImage is not None):
-            self.imageMin.setText(str(numpy.min(self.data[selectedImage])))
-            self.imageMax.setText(str(numpy.max(self.data[selectedImage])))
-            self.imageSum.setText(str(numpy.sum(self.data[selectedImage])))
+            self.imageRange.setText("%d to %d" %(numpy.min(self.dataset[selectedImage]),numpy.max(self.dataset[selectedImage])))
+            self.imageSum.setText(str(numpy.sum(self.dataset[selectedImage])))
             self.imageBox.show()
+            (hist,edges) = numpy.histogram(self.dataset[selectedImage],bins=100)
+            self.intensityHistogram.clear()
+            edges = (edges[:-1]+edges[1:])/2.0
+            item = self.intensityHistogram.plot(edges,hist,fillLevel=0,fillBrush=QtGui.QColor(255, 255, 255, 128),antialias=True)
+            self.intensityHistogram.getPlotItem().getViewBox().setMouseEnabled(x=False,y=False)
+            region = pyqtgraph.LinearRegionItem(values=[self.displayMin.value(),self.displayMax.value()],brush="#ffffff15")
+            region.sigRegionChangeFinished.connect(self.onHistogramClicked)    
+            self.intensityHistogram.addItem(region)
+            self.intensityHistogram.autoRange()
+            self.intensityHistogramRegion = region
         else:
-            self.parent.datasetProp.imageBox.hide()
+            self.imageBox.hide()
+    def onHistogramClicked(self,region):
+        (min,max) = region.getRegion()
+        self.displayMin.setValue(min)
+        self.displayMax.setValue(max)
+        self.emitDisplayProp()
     # NORM
     def setNorm(self):
         P = self.currDisplayProp
@@ -285,6 +303,7 @@ class DatasetProp(QtGui.QWidget):
             P["normVmax"] = 1000.
         self.displayMin.setValue(P["normVmin"])
         self.displayMax.setValue(P["normVmax"])
+        self.intensityHistogramRegion.setRegion([self.displayMin.value(),self.displayMax.value()])
     def clearNorm(self):
         self.displayMin.setValue(10.)
         self.displayMax.setValue(1000.)
@@ -295,9 +314,13 @@ class DatasetProp(QtGui.QWidget):
     # COLORMAP
     def setColormap(self,foovalue=None):
         P = self.currDisplayProp
-        P["colormapText"] = self.displayColormap.currentText()
+        a = self.viewer.colormapActionGroup.checkedAction()
+        self.displayColormap.setText(a.text())        
+        self.displayColormap.setIcon(a.icon())        
+        P["colormapText"] = a.text()
+
     def clearColormap(self):
-        self.displayColormap.setCurrentIndex(0)
+#        self.displayColormap.setCurrentIndex(0)
         self.setColormap()
     # STACK
     def setImageStackSubplots(self,foovalue=None):

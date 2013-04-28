@@ -20,7 +20,7 @@ class ViewStack(QtGui.QStackedWidget):
         self.addWidget(self.view2D)
 
 class View(object):
-    def __init__(self,parent=None):
+    def __init__(self,parent=None):        
         self.parent = parent
         self.setData()
         self.setMask()

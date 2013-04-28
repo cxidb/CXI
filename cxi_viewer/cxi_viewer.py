@@ -33,6 +33,7 @@ class Viewer(QtGui.QMainWindow):
         QtGui.QMainWindow.__init__(self)
         self.statusBar = self.statusBar()
         self.statusBar.showMessage("Initializing...")
+        self.init_menus()
         self.splitter = QtGui.QSplitter(self)
         self.view = ViewStack(self)
         self.datasetProp = DatasetProp(self)
@@ -43,9 +44,10 @@ class Viewer(QtGui.QMainWindow):
 
         self.splitter.setStretchFactor(0,0)
         self.splitter.setStretchFactor(1,1)
+        self.splitter.setStretchFactor(2,0)
         self.setCentralWidget(self.splitter)
         self.statusBar.showMessage("Initialization complete.",1000)
-        self.init_menus()
+        
         self.geometry = Geometry();
         self.resize(800,450)
         settings = QtCore.QSettings()
@@ -60,7 +62,6 @@ class Viewer(QtGui.QMainWindow):
         self.CXINavigation.CXITreeTop.datasetChanged.connect(self.handleViewDatasetChanged)
         self.CXINavigation.CXITreeBottom.datasetChanged.connect(self.handleSortDatasetChanged)
         self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
-
     def after_show(self):
         if(len(sys.argv) > 1):
             self.CXINavigation.CXITreeTop.buildTree(sys.argv[1])
@@ -102,6 +103,33 @@ class Viewer(QtGui.QMainWindow):
             act.triggered.connect(self.viewClicked)
             if viewName == "Dataset Properties": 
                 self.viewMenu.addSeparator()
+
+
+        icon_width = 64
+        icon_height = 64
+        colormapIcons = paintColormapIcons(icon_width,icon_height)
+
+        self.colormapMenu = QtGui.QMenu("Colormap")
+        self.colormapActionGroup = QtGui.QActionGroup(self)
+
+        traditionalColormaps = ['jet','hot','gray','coolwarm','gnuplot','gist_earth']
+        self.colormapActions = {}
+        for colormap in traditionalColormaps:            
+            a = self.colormapMenu.addAction(colormapIcons.pop(colormap),colormap)
+            a.setActionGroup(self.colormapActionGroup)
+            a.setCheckable(True)
+            self.colormapActions[colormap] = a
+
+        self.exoticColormapMenu = QtGui.QMenu("Exotic")
+        for colormap in colormapIcons.keys():
+            a = self.exoticColormapMenu.addAction(colormapIcons[colormap],colormap)
+            a.setActionGroup(self.colormapActionGroup)
+            a.setCheckable(True)
+            self.colormapActions[colormap] = a
+
+        self.colormapActions['jet'].setChecked(True)
+        self.colormapMenu.addMenu(self.exoticColormapMenu)
+        self.viewMenu.addMenu(self.colormapMenu)
 
     def openFileClicked(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
@@ -165,7 +193,28 @@ class Viewer(QtGui.QMainWindow):
             QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
     def handleDisplayPropChanged(self,prop):
         self.view.view2D.refreshDisplayProp(prop)
-   
+
+
+def paintColormapIcons(W,H):
+    a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
+    maps=[m for m in cm.datad if not m.endswith("_r")]
+    mappable = cm.ScalarMappable()
+    mappable.set_norm(colors.Normalize())
+    iconDict = {}
+    for m in maps:
+        mappable.set_cmap(m)
+        temp = mappable.to_rgba(a,None,True)[:,:,:]
+        a_rgb = numpy.zeros(shape=(H,W,4),dtype=numpy.uint8)
+        # For some reason we have to swap indices !? Otherwise inverted colors...
+        a_rgb[:,:,2] = temp[:,:,0]
+        a_rgb[:,:,1] = temp[:,:,1]
+        a_rgb[:,:,0] = temp[:,:,2]
+        a_rgb[:,:,3] = 0xff
+        img = QtGui.QImage(a_rgb,W,H,QtGui.QImage.Format_ARGB32)
+        icon = QtGui.QIcon(QtGui.QPixmap.fromImage(img))
+        iconDict[m] = icon
+    return iconDict
+
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):
         QtGui.QDialog.__init__(self,parent,QtCore.Qt.WindowTitleHint)
