@@ -225,7 +225,8 @@ class DatasetProp(QtGui.QWidget):
         self.clearColormap()
         self.clearMask()
     # DATASET
-    def setDataset(self,dataset=None):
+    def setDataset(self,dataset=None,format=2):
+        if format == 2
         self.dataset = dataset
         if dataset != None:
             self.dataset = dataset

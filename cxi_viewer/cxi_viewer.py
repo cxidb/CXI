@@ -194,27 +194,6 @@ class Viewer(QtGui.QMainWindow):
     def handleDisplayPropChanged(self,prop):
         self.view.view2D.refreshDisplayProp(prop)
 
-
-def paintColormapIcons(W,H):
-    a = numpy.outer(numpy.ones(shape=(H,)),numpy.linspace(0.,1.,W))
-    maps=[m for m in cm.datad if not m.endswith("_r")]
-    mappable = cm.ScalarMappable()
-    mappable.set_norm(colors.Normalize())
-    iconDict = {}
-    for m in maps:
-        mappable.set_cmap(m)
-        temp = mappable.to_rgba(a,None,True)[:,:,:]
-        a_rgb = numpy.zeros(shape=(H,W,4),dtype=numpy.uint8)
-        # For some reason we have to swap indices !? Otherwise inverted colors...
-        a_rgb[:,:,2] = temp[:,:,0]
-        a_rgb[:,:,1] = temp[:,:,1]
-        a_rgb[:,:,0] = temp[:,:,2]
-        a_rgb[:,:,3] = 0xff
-        img = QtGui.QImage(a_rgb,W,H,QtGui.QImage.Format_ARGB32)
-        icon = QtGui.QIcon(QtGui.QPixmap.fromImage(img))
-        iconDict[m] = icon
-    return iconDict
-
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):
         QtGui.QDialog.__init__(self,parent,QtCore.Qt.WindowTitleHint)
