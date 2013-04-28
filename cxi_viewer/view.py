@@ -8,6 +8,17 @@ from matplotlib import colors
 from matplotlib import cm
 import pyqtgraph
 
+class ViewStack(QtGui.QStackedWidget):
+    def __init__(self,parent=None):
+        QtGui.QStackedWidget.__init__(self,parent)
+        self.setContentsMargins(0,0,0,0)
+        self.setStyleSheet("background-color: black;"
+                           "selection-background-color: blue;")
+        self.view1D = View1D(self)
+        self.view2D = View2D(self)
+        self.addWidget(self.view1D)
+        self.addWidget(self.view2D)
+
 class View(object):
     def __init__(self,parent=None):
         self.parent = parent
@@ -56,13 +67,34 @@ class View(object):
         else:
             return index
 
-class View1D(View,pyqtgraph.PlotWidget):
+class View1D(View,QtGui.QWidget):
     def __init__(self,parent=None):
         View.__init__(self,parent)
-        pyqtgraph.PlotWidget.__init__(self,parent)
+        QtGui.QWidget.__init__(self,parent)
+        self.hbox = QtGui.QHBoxLayout(self)
+        margin = 60
+        self.hbox.setContentsMargins(margin,margin,margin,margin)
+        self.plot = pyqtgraph.PlotWidget()
+        self.initPlot()
+        self.hbox.addWidget(self.plot)
+        self.setLayout(self.hbox)
+        self.p = None
+    def initPlot(self):
+        space = 60
+        self.plot.getAxis("top").setHeight(space)
+        self.plot.getAxis("bottom").setHeight(space)
+        self.plot.getAxis("left").setWidth(space)
+        self.plot.getAxis("right").setWidth(space)
     def loadData(self,dataset):
         self.setData(dataset)
-
+        data = self.getData(1)
+        self.plot.setLabel("bottom","event #")
+        self.plot.setLabel("left",self.data.name)
+        if self.p == None:
+            self.p = self.plot.plot(data, pen=(255,0,0))
+        else:
+            self.p.setData(data)
+        #self.showGrid(x=True, y=True)
 
 class FunctionNorm(colors.Normalize):
     def __init__(self, normFunction, vmin=None, vmax=None, clip=False):
@@ -417,7 +449,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         if(data.getCXIFormat() == 2):        
             self.setData(data)
             self.setStackWidth(self.stackWidth)
-            self.clearTextrures()
+            self.clearTextures()
             self.updateGL()
         else:
             print "3D images not supported."

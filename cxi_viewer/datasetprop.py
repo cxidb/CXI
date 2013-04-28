@@ -25,7 +25,7 @@ class DatasetProp(QtGui.QWidget):
     displayPropChanged = QtCore.Signal(dict)
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
-        self.parent = parent
+        # this dict holds all current settings
         self.currDisplayProp = {}
         self.vbox = QtGui.QVBoxLayout()
         # scrolling
