@@ -34,7 +34,7 @@ class Viewer(QtGui.QMainWindow):
         self.statusBar = self.statusBar()
         self.statusBar.showMessage("Initializing...")
         self.splitter = QtGui.QSplitter(self)
-        self.view = View(self)
+        self.view = View2D(self)
         self.datasetProp = DatasetProp(self)
         self.CXINavigation = CXINavigation(self)
         self.splitter.addWidget(self.CXINavigation)
@@ -43,6 +43,7 @@ class Viewer(QtGui.QMainWindow):
 
         self.splitter.setStretchFactor(0,0)
         self.splitter.setStretchFactor(1,1)
+        self.splitter.setStretchFactor(2,0)
         self.setCentralWidget(self.splitter)
         self.statusBar.showMessage("Initialization complete.",1000)
         self.init_menus()
@@ -57,6 +58,9 @@ class Viewer(QtGui.QMainWindow):
             settings.setValue("scrollDirection", 1);  
         QtCore.QTimer.singleShot(0,self.after_show)
 
+        self.CXINavigation.CXITreeTop.datasetChanged.connect(self.handleViewDatasetChanged)
+        self.CXINavigation.CXITreeBottom.datasetChanged.connect(self.handleSortDatasetChanged)
+        self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
     def after_show(self):
         if(len(sys.argv) > 1):
             self.CXINavigation.CXITreeTop.buildTree(sys.argv[1])
@@ -133,6 +137,42 @@ class Viewer(QtGui.QMainWindow):
                 settings.setValue("scrollDirection",-1)
             else:
                 settings.setValue("scrollDirection",1)
+    def handleViewDatasetChanged(self,dataset):
+        format = dataset.getCXIFormat()
+        if format == 1:
+            if not isinstance(self.view,View1D):
+                self.view.clear()
+                self.view = View1D(self)
+            self.view.loadData(dataset)
+        elif format == 2:
+            if not isinstance(self.view,View2D):
+                self.view.clear()
+                self.view = View2D(self)
+            self.datasetProp.clear()
+            self.view.clear()
+            if dataset.isCXIStack():
+                self.view.loadStack(dataset)
+            else:
+                self.view.loadImage(dataset)
+            self.statusBar.showMessage("Loaded %s" % dataset.name,1000)
+        elif format == 3:
+            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets of given shape. The selected dataset has %d dimensions." %(len(dataset.shape))))
+            return
+        self.datasetProp.setDataset(dataset)
+    def handleSortDatasetChanged(self,dataset):
+        format = dataset.getCXIFormat()
+        if(format == 1):
+            self.view.setSortingIndices(dataset)
+            self.view.clearTextures()
+            self.view.updateGL()
+        else:
+            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
+    def handleDisplayPropChanged(self,prop):
+        if isinstance(self.view,View2D):
+            self.view.refreshDisplayProp(prop)
+
+        
+
    
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):

@@ -8,103 +8,43 @@ from matplotlib import colors
 from matplotlib import cm
 import pyqtgraph
 
-class PowNorm(colors.Normalize):
-    def __init__(self, gamma=1, vmin=None, vmax=None, clip=False):
-        colors.Normalize.__init__(self,vmin,vmax,clip)
-        self.gamma = gamma
-        self.clip = clip
-    def __call__(self,value,clip=None):
-        clip = self.clip
-        outvalue = value.copy()
-        mask = (False==numpy.isfinite(outvalue))
-        above = value > self.vmax
-        if above.sum() > 0:
-            if clip: outvalue[above] = self.vmax
-            else: mask |= above
-        below = value < self.vmin
-        if below.sum() > 0:
-            if clip: outvalue[below] = self.vmin
-            else: mask |= below
-        if self.gamma < 1:
-            below = value < 0
-            if below.sum() > 0:
-                if clip: outvalue[below] = 0
-                else: mask |= below
-        outvalue = outvalue**self.gamma/self.vmax**self.gamma
-        return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
-
-
-class ImageLoader(QtCore.QObject):
-    imageLoaded = QtCore.Signal(int) 
-    def __init__(self,parent = None,view = None):
-        QtCore.QObject.__init__(self,parent)  
-        self.view = view
-        self.imageData = {}
-        self.loaded = {}
-        self.mappable = cm.ScalarMappable()
-        self.setNorm()
-        self.setColormap()
-        self.setPixelmask()
-        self.setMaskOutBits()
+class View(object):
+    def __init__(self,parent=None):        
+        self.parent = parent
+        self.setData()
+        self.setMask()
         self.setSortingIndices()
-        self.initialLoad = True
-    @QtCore.Slot(int,int)
-    def loadImage(self,img):
-        if(img in self.loaded):
-           return
-        if self.initialLoad:
-            self.update()
-            self.intialLoad = False
-        img_sorted = self.getSortedIndex(img)
-        data = self.view.data[img_sorted,:]
-        self.loaded[img] = True
-        offset = float(numpy.min(data))
-        scale = float(numpy.max(data)-offset)
-        if(scale == 0):
-            scale = 1
-        self.imageData[img] = numpy.ones((data.shape[0],data.shape[1],4),dtype=numpy.uint8)
-        if self.normName == 'log':
-            data[data<=0] = self.mappable.get_clim()[0]
-        if(self.view.parent.datasetProp.imageStackBox.isVisible() and
-           self.view.parent.datasetProp.imageStackGlobalScale.isChecked()):
-            offset = self.view.parent.datasetProp.imageStackGlobalScale.minimum
-            scale = float(self.view.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        #print self.imageData[img][0,0,0]
-        #print self.mappable.to_rgba(data,None,True)[0,0,0]
-        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
-        if self.view.mask != None and not self.maskOutBits == 0:
-            mask = self.getMask(img_sorted)
-            self.imageData[img][:,:,3] = 255*((mask & self.maskOutBits) == 0)
-        self.imageLoaded.emit(img)
-    def getMask(self,img_sorted):
-        if self.pixelmaskText == 'none':
+    # DATA
+    def setData(self,data=None):
+        self.data = data
+        if self.data != None:
+            self.has_data = True
+        else:
+            self.has_data = False
+    def getData(self,nDims=2,img_sorted=0):
+        if self.data == None:
             return None
-        elif self.pixelmaskText == 'mask_shared':
-            return self.view.mask[:]
-        elif self.pixelmaskText == 'mask':
-            return self.view.mask[img_sorted,:]
-    def setColormap(self,name='jet'):
-        self.mappable.set_cmap(name)
-    def setNorm(self,name='log',vmin=1.,vmax=10000.,gamma=1):
-        if name == 'lin':
-            norm = colors.Normalize(vmin,vmax,True)
-        elif name == 'pow':
-            gamma = self.view.parent.datasetProp.displayGamma.value()
-            norm = PowNorm(gamma,vmin,vmax,True)
-        elif name == 'log':
-            norm = colors.LogNorm(vmin,vmax,True)
-        self.normName = name
-        self.mappable.set_norm(norm)
-        self.mappable.set_clim(vmin,vmax)
-    def setPixelmask(self,pixelmaskText="none"):
-        if pixelmaskText == "none":
-            self.view.mask = None
-        elif hasattr(self.view.parent,'CXINavigation'):
-            if self.pixelmaskText != pixelmaskText and pixelmaskText != 'none':
-                self.view.mask = self.view.parent.CXINavigation.CXITreeTop.f[self.view.parent.CXINavigation.CXITreeTop.currGroupName+'/'+pixelmaskText]
-        self.pixelmaskText = pixelmaskText
-    def setMaskOutBits(self,value=0):
-        self.maskOutBits = value
+        elif nDims == 1:
+            return numpy.array(self.data).flatten()
+        elif nDims == 2:
+            if self.data.isCXIStack():
+                return numpy.array(self.data[img_sorted,:,:])
+            else:
+                return numpy.array(self.data[:,:])
+    # MASK
+    def setMask(self,maskDataset=None,maskOutBits=0):
+        self.mask = maskDataset
+        self.maskOutBits = maskOutBits
+    def getMask(self,nDims=2,img_sorted=0):
+        if self.mask == None:
+            return None
+        elif nDims == 2:
+            if self.mask.isCXIStack():
+                mask = self.mask[img_sorted,:,:]
+            else:
+                mask = self.mask[:,:]        
+            return ((mask & self.maskOutBits) == 0)
+    # SORTING
     def setSortingIndices(self, data=None):
         if data != None:
             self.sortingIndices = numpy.argsort(data)
@@ -115,57 +55,94 @@ class ImageLoader(QtCore.QObject):
             return self.sortingIndices[index]
         else:
             return index
-    def update(self):
-        if hasattr(self.view.parent,'datasetProp'):
-            self.setColormap(self.view.parent.datasetProp.displayColormap.currentText())
-            vmin = self.view.parent.datasetProp.displayMin.value()
-            vmax = self.view.parent.datasetProp.displayMax.value()
-            if vmin >= vmax:
-                vmin = vmax - 1000.
-                self.view.parent.datasetProp.displayMin.setValue(vmin)
-            if self.view.parent.datasetProp.displayLin.isChecked():
-                self.setNorm('lin',vmin,vmax)
-            elif self.view.parent.datasetProp.displayLog.isChecked():
-                if vmin <= 0.:
-                    vmin = 1.
-                    self.view.parent.datasetProp.displayMin.setValue(vmin)
-                if vmax <= 0.:
-                    vmax = vmin+10000.
-                    self.view.parent.datasetProp.displayMax.setValue(vmax)
-                self.setNorm('log',vmin,vmax)
-            elif self.view.parent.datasetProp.displayPow.isChecked():
-                self.setNorm('pow',vmin,vmax,)
-            else: print "ERROR: No Scaling chosen."
-            print self.view.parent.datasetProp.maskPixelmask.currentText()
-            self.setPixelmask(self.view.parent.datasetProp.maskPixelmask.currentText())
-            maskOutBits = 0
-            masksBoxes = self.view.parent.datasetProp.masksBoxes
-            for maskKey in masksBoxes:
-                if masksBoxes[maskKey].isChecked():
-                    maskOutBits |= PIXELMASK_BITS[maskKey]
-            self.setMaskOutBits(maskOutBits)
-    def clear(self):
-        self.imageData = {}
-        self.loaded = {}
-        self.intialLoad = True
 
-#class View:
-#    def __init_(self,parent=None):
-        
-
-
-#class View1D(View,pyqtgraph.PlotWidget):
-#    def __init__(self,parent=None):
-#        View.__init__(self)
-#        pyqtgraph.PlotWidget.__init__(name="1D Graph")
-        
-        
-
-#class View2D(View,QtOpenGL.QGLWidget):
-class View(QtOpenGL.QGLWidget):
-    needsImage = QtCore.Signal(int) 
+class View1D(View,pyqtgraph.PlotWidget):
     def __init__(self,parent=None):
-        #View.__init__(self)
+        View.__init__(self,parent)
+        pyqtgraph.PlotWidget.__init__(self,parent)
+    def loadData(self,dataset):
+        self.setData(dataset)
+
+
+class FunctionNorm(colors.Normalize):
+    def __init__(self, normFunction, vmin=None, vmax=None, clip=False):
+        colors.Normalize.__init__(self,vmin,vmax,clip)
+        self.function = normFunction
+        self.clip = clip
+    def __call__(self,value,clip=None):
+        clip = self.clip
+        value_clipped = numpy.array(value,dtype="float")
+        mask = numpy.isfinite(value_clipped) == False
+        fvmin = self.function(self.vmin)
+        fvmax = self.function(self.vmax)
+        # check validity of given vmin and vmax
+        if self.vmin > self.vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
+            return numpy.ma.array(zeros_like(value),mask=ones_like(value),fill_value=1e+20)
+        # clipping / masking for values out of range
+        above = value_clipped > self.vmax
+        if above.sum() > 0:
+            if clip: value_clipped[above] = self.vmax
+            else: mask |= above
+        below = value_clipped < self.vmin
+        if below.sum() > 0:
+            if clip: value_clipped[below] = self.vmin
+            else: mask |= below
+        # apply norm function
+        outvalue = self.function(value_clipped)
+        # masking for invalid values
+        invalid = numpy.isfinite(outvalue) == False
+        if invalid.sum() > 0:
+            mask |= invalid
+        # scale to interval 0 to 1
+        outvalue = (outvalue-fvmin)/(fvmax-fvmin)
+        return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
+
+class ImageLoader(QtCore.QObject):
+    imageLoaded = QtCore.Signal(int) 
+    def __init__(self,parent = None,view = None):
+        QtCore.QObject.__init__(self,parent)  
+        self.view = view
+        self.loaded = {}
+        self.imageData = {}
+        self.mappable = cm.ScalarMappable()
+        self.setNorm()
+        self.setColormap()
+    @QtCore.Slot(int,int)
+    def loadImage(self,img):
+        if(img in self.loaded):
+           return
+        self.loaded[img] = True
+        img_sorted = self.view.getSortedIndex(img)
+        data = self.view.getData(2,img_sorted)
+        mask = self.view.getMask(2,img_sorted)
+        self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth(),4),dtype=numpy.uint8)
+        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
+        if mask!=None:
+            self.imageData[img][:,:,3] = 255*mask
+        self.imageLoaded.emit(img)
+    def clear(self):
+        self.loaded = {}
+    # COLORMAP
+    def setColormap(self,colormapName='jet'):
+        self.mappable.set_cmap(colormapName)
+    def setNorm(self,scaling='log',vmin=1.,vmax=10000.,clip=True,gamma=1):
+        self.normScaling = scaling
+        if scaling == 'lin':
+            f = lambda x: x
+        elif scaling == 'pow':
+            gamma = self.view.parent.datasetProp.displayGamma.value()
+            f = lambda x: x**gamma
+        elif scaling == 'log':
+            f = lambda x: numpy.log10(x)
+        norm = FunctionNorm(f,vmin,vmax,clip)
+        self.mappable.set_norm(norm)
+        self.mappable.set_clim(vmin,vmax)
+
+class View2D(View,QtOpenGL.QGLWidget):
+    needsImage = QtCore.Signal(int)
+    clearLoaderThread = QtCore.Signal(int)
+    def __init__(self,parent=None):
+        View.__init__(self,parent)
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
         self.zoom = 4.0
@@ -181,14 +158,16 @@ class View(QtOpenGL.QGLWidget):
         self.subplotBorder = 10
         self.selectedImage = None
         self.lastHoveredImage = None
-        self.mode = None
         self.stackWidth = 1;
         self.has_data = False
+        self.imageData = {}
 
-        self.imageLoader = QtCore.QThread()
         self.loaderThread = ImageLoader(None,self)
         self.needsImage.connect(self.loaderThread.loadImage)
         self.loaderThread.imageLoaded.connect(self.generateTexture)
+        self.clearLoaderThread.connect(self.loaderThread.clear)
+
+        self.imageLoader = QtCore.QThread()
         self.loaderThread.moveToThread(self.imageLoader)    
         self.imageLoader.start()
 
@@ -196,6 +175,7 @@ class View(QtOpenGL.QGLWidget):
         self.loadingImageAnimationTimer = QtCore.QTimer()
         self.loadingImageAnimationTimer.timeout.connect(self.incrementLoadingImageAnimationFrame)
         self.loadingImageAnimationTimer.start(100)
+
     def stopThreads(self):
         while(self.imageLoader.isRunning()):
             self.imageLoader.quit()
@@ -229,8 +209,9 @@ class View(QtOpenGL.QGLWidget):
         Resize the GL window 
         '''
         if(self.has_data):
-            self.setStackWidth(self.stackWidth) 
-
+            self.setStackWidth(self.stackWidth)
+            self.clearTextures()
+            self.updateGL()
         glViewport(0, 0, w, h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
@@ -337,8 +318,8 @@ class View(QtOpenGL.QGLWidget):
             glEnd()
     def paintLoadingImage(self,img):
         frame = self.loadingImageAnimationFrame%24
-        img_width = self.data.shape[2]
-        img_height = self.data.shape[1]
+        img_width = self.data.getCXIWidth()
+        img_height = self.data.getCXIHeight()
         glPushMatrix()
         (x,y,z) = self.imageToScene(img,imagePos='BottomLeft',withBorder=False)
         glTranslatef(x,y,z)
@@ -367,8 +348,8 @@ class View(QtOpenGL.QGLWidget):
         self.renderText(3*img_width/8.0,3*img_height/10.0,0.0,"Loading...",font);
         glPopMatrix()
     def paintImage(self,img):
-        img_width = self.data.shape[2]
-        img_height = self.data.shape[1]
+        img_width = self.data.getCXIWidth()
+        img_height = self.data.getCXIHeight()
         glPushMatrix()
 
         (x,y,z) = self.imageToScene(img,imagePos='BottomLeft',withBorder=False)
@@ -417,9 +398,9 @@ class View(QtOpenGL.QGLWidget):
         # Put GL origin on the top left corner of the widget
         glTranslatef(-(self.width()/self.zoom)/2.,(self.height()/self.zoom)/2.,0)
         if(self.has_data):
-            if(self.mode == "Stack"):
-                img_width = self.data.shape[2]
-                img_height = self.data.shape[1]
+            if(self.data.getCXIFormat() == 2):
+                img_width = self.data.getCXIWidth()
+                img_height = self.data.getCXIHeight()
                 visible = self.visibleImages()
                 self.updateTextures(visible)
                 for i,img in enumerate(self.textureIds):
@@ -427,48 +408,25 @@ class View(QtOpenGL.QGLWidget):
                 for img in (set(visible) - set(self.textureIds)):
                     self.paintLoadingImage(img)
         glFlush()
-    def imshow(self,data,subplot_x=0,subplot_y=0,update=True):
-        self.data[(subplot_x,subplot_y)] = data
-        offset = numpy.min(data);
-        scale = float(numpy.max(data)-offset)
-        if(scale == 0):
-            scale = 1
-        imageData = numpy.ones((data.shape[0],data.shape[1],3),dtype=numpy.uint8)
-        gamma = self.parent.datasetProp.displayGamma.value();
-        if(self.parent.datasetProp.imageStackBox.isVisible() and
-           self.parent.datasetProp.imageStackGlobalScale.isChecked()):
-            offset = self.parent.datasetProp.imageStackGlobalScale.minimum
-            scale = float(self.parent.datasetProp.imageStackGlobalScale.maximum-offset)
-        imageData[:,:,0] = 255*((data-offset)/scale)**(gamma)
-        imageData[:,:,1] = 255*((data-offset)/scale)**(gamma)
-        imageData[:,:,2] = 255*((data-offset)/scale)**(gamma)
-        self.texture[(subplot_x,subplot_y)] = glGenTextures(1)
-        glBindTexture(GL_TEXTURE_2D, self.texture[(subplot_x,subplot_y)])
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, data.shape[1], data.shape[0], 0, GL_RGB, GL_UNSIGNED_BYTE, imageData);
-        self.has_data = True
-        if(update):
-            self.updateGL()
     def addToStack(self,data):
         pass
     def loadStack(self,data):
-        self.mode = "Stack"
-        self.data = data
-        self.has_data = True
+        self.setData(data)
         self.setStackWidth(self.stackWidth)
     def loadImage(self,data):
-        print "Loading..."
-        if(len(data.shape) == 2):        
-            self.mode = "Stack"  
-            self.data = numpy.array(data)
-            self.data = self.data.reshape((1,data.shape[0],data.shape[1]))
-            self.has_data = True
+        if(data.getCXIFormat() == 2):        
+            self.setData(data)
             self.setStackWidth(self.stackWidth)
+            self.clearTextrures()
+            self.updateGL()
         else:
-            print "3D images not supported"
+            print "3D images not supported."
             sys.exit(-1)
+    def getNImages(self):
+        if self.data.isCXIStack():
+            return self.data.shape[0]
+        else:
+            return 1
     def visibleImages(self):
         visible = []
         if(self.has_data is False):
@@ -479,23 +437,24 @@ class View(QtOpenGL.QGLWidget):
 
         top_left = self.imageToCell(top_left)
         bottom_right = self.imageToCell(bottom_right)
-
+        nImages = self.getNImages()
         for x in numpy.arange(0,self.stackWidth):
             for y in numpy.arange(max(0,math.floor(top_left[1])),math.floor(bottom_right[1]+1)):
                 img = y*self.stackWidth+x
-                if(img < self.data.shape[0]):
+                if(img < nImages):
                     visible.append(y*self.stackWidth+x)
         return visible
     @QtCore.Slot(int)
     def generateTexture(self,img):
+        imageData = self.loaderThread.imageData[img][:,:,:]
         texture = glGenTextures(1)
         glEnable(GL_BLEND)
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glBindTexture(GL_TEXTURE_2D, texture)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, self.loaderThread.imageData[img].shape[1], self.loaderThread.imageData[img].shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, self.loaderThread.imageData[img]);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageData.shape[1], imageData.shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
         self.textureIds[img] = texture
         self.updateGL()
     def updateTextures(self,images):
@@ -514,18 +473,18 @@ class View(QtOpenGL.QGLWidget):
         # Translation is bounded by top_margin < translation < bottom_margin
         if(self.has_data):
             margin = self.subplotBorder*3
-            img_height = (self.data.shape[1]+self.subplotSceneBorder())*self.zoom
+            img_height = (self.data.getCXIHeight()+self.subplotSceneBorder())*self.zoom
             top_margin = -margin
             if(self.translation[1] < top_margin):
                 self.translation[1] = top_margin
-            stack_height = (self.data.shape[0]/self.stackWidth+1)*img_height
+            stack_height = (self.getNImages()/self.stackWidth+1)*img_height
             bottom_margin = max(0,stack_height+margin-self.height())
             if(self.translation[1] > bottom_margin):
                 self.translation[1] = bottom_margin
     def keyPressEvent(self, event):
         delta = self.width()/20
-        img_height =  self.data.shape[1]*self.zoom+self.subplotBorder
-        stack_height = math.ceil(((self.data.shape[0]-0.0001)/self.stackWidth))*img_height
+        img_height =  self.data.getCXIHeight()*self.zoom+self.subplotBorder
+        stack_height = math.ceil(((self.getNImages()-0.0001)/self.stackWidth))*img_height
         if(event.key() == QtCore.Qt.Key_Up):
             self.translation[1] -= delta
             self.clipTranslation()
@@ -597,7 +556,7 @@ class View(QtOpenGL.QGLWidget):
         if(self.dragging):
             self.translation[1] -= (event.pos()-self.dragPos).y()
             self.clipTranslation()
-            if(self.mode is not "Stack" or (QtGui.QApplication.keyboardModifiers().__and__(QtCore.Qt.ControlModifier))):
+            if(QtGui.QApplication.keyboardModifiers().__and__(QtCore.Qt.ControlModifier)):
                self.translation[0] += (event.pos()-self.dragPos).x()
             self.dragPos = event.pos()
             self.updateGL()
@@ -618,8 +577,8 @@ class View(QtOpenGL.QGLWidget):
     # By default the coordinate of the TopLeft corner of the image is returned
     # By default the border is considered part of the image
     def imageToScene(self,imgIndex,imagePos='TopLeft',withBorder=True):
-        img_width = self.data.shape[2]+self.subplotSceneBorder()
-        img_height = self.data.shape[1]+self.subplotSceneBorder()
+        img_width = self.data.getCXIWidth()+self.subplotSceneBorder()
+        img_height = self.data.getCXIHeight()+self.subplotSceneBorder()
         (col,row) = self.imageToCell(imgIndex)
         x = img_width*col
         y = -img_height*row
@@ -671,16 +630,16 @@ class View(QtOpenGL.QGLWidget):
     # Returns the index of the image that it at a particular window location
     def windowToImage(self,x,y,z,checkExistance=True, clip=True):
         if(self.has_data > 0):
-            shape = self.data.shape
+            shape = (self.data.getCXIHeight(),self.data.getCXIWidth())
             modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
             projection = glGetDoublev(GL_PROJECTION_MATRIX)
             viewport = glGetIntegerv(GL_VIEWPORT);
             (x,y,z) =  gluUnProject(x, viewport[3]-y,z , model=modelview, proj=projection, view=viewport)
             
-            (x,y) = (int(numpy.floor(x/(shape[2]+self.subplotSceneBorder()))),int(numpy.floor(-y/(shape[1]+self.subplotSceneBorder()))))
+            (x,y) = (int(numpy.floor(x/(self.data.getCXIWidth()+self.subplotSceneBorder()))),int(numpy.floor(-y/(self.data.getCXIHeight()+self.subplotSceneBorder()))))
             if(clip and (x < 0 or x >= self.stackWidth or y < 0)):
                 return None            
-            if(checkExistance and x + y*self.stackWidth >= self.data.shape[0]):
+            if(checkExistance and x + y*self.stackWidth >= self.getNImages()):
                 return None
             return x + y*self.stackWidth
 
@@ -702,19 +661,19 @@ class View(QtOpenGL.QGLWidget):
         if(self.has_data is not True):
             return 1
         # Calculate the zoom necessary for the given stack width to fill the current viewport width
-        new_zoom = float(self.width()-width*self.subplotBorder)/(self.data.shape[2]*width)
+        new_zoom = float(self.width()-width*self.subplotBorder)/(self.data.getCXIWidth()*width)
         self.scaleZoom(new_zoom/self.zoom)
     def clear(self):
-        self.has_data = False
-        self.data = {}
+        self.setData()
+        self.setMask()
+        self.setSortingIndices()
+        self.clearLoaderThread.emit(0)
         self.clearTextures()
         self.updateGL()
-        self.loaderThread.clear()
     def clearTextures(self):
         glDeleteTextures(self.textureIds.values())
         self.textureIds = {}
-        self.loaderThread.clear()
-        self.loaderThread.update()
+        self.clearLoaderThread.emit(0)
     def setStackWidth(self,width):  
         ratio = float(self.stackWidth)/width 
         self.stackWidth = width 
@@ -727,38 +686,20 @@ class View(QtOpenGL.QGLWidget):
         self.zoomFromStackWidth(width)            
         self.translation[1] = (self.translation[1] + self.height()/2.0)*ratio-self.height()/2.0
         self.clipTranslation()
-        self.parent.view.updateGL()
     def stackSceneWidth(self,width):
         return 
     def subplotSceneBorder(self):
         return self.subplotBorder/self.zoom
+    def refreshDisplayProp(self,datasetProp):
+        if datasetProp != None:
+            self.setMask(datasetProp["maskDataset"],datasetProp["maskOutBits"])
+            self.loaderThread.setNorm(datasetProp["normScaling"],datasetProp["normVmin"],datasetProp["normVmax"],datasetProp["normClip"],datasetProp["normGamma"])
+            self.loaderThread.setColormap(datasetProp["colormapText"])
+            self.setStackWidth(datasetProp["imageStackSubplotsValue"])
+        self.clearTextures()
+        self.updateGL()
+        
 
 
 
 
-
-PIXEL_IS_PERFECT = 0
-PIXEL_IS_INVALID = 1
-PIXEL_IS_SATURATED = 2
-PIXEL_IS_HOT = 4
-PIXEL_IS_DEAD = 8
-PIXEL_IS_SHADOWED = 16
-PIXEL_IS_IN_PEAKMASK = 32
-PIXEL_IS_TO_BE_IGNORED = 64
-PIXEL_IS_BAD = 128
-PIXEL_IS_OUT_OF_RESOLUTION_LIMITS = 256
-PIXEL_IS_MISSING = 512
-PIXEL_IS_IN_HALO = 1024
-
-PIXELMASK_BITS = {'perfect' : PIXEL_IS_PERFECT,
-                  'invalid' : PIXEL_IS_INVALID,
-                  'saturated' : PIXEL_IS_SATURATED,
-                  'hot' : PIXEL_IS_HOT,
-                  'dead' : PIXEL_IS_DEAD,
-                  'shadowed' : PIXEL_IS_SHADOWED,
-                  'peakmask' : PIXEL_IS_IN_PEAKMASK,
-                  'ignore' : PIXEL_IS_TO_BE_IGNORED,
-                  'bad' : PIXEL_IS_BAD,
-                  'resolution' : PIXEL_IS_OUT_OF_RESOLUTION_LIMITS,
-                  'missing' : PIXEL_IS_MISSING,
-                  'halo' : PIXEL_IS_IN_HALO}

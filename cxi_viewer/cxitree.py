@@ -4,6 +4,44 @@ import h5py
 from operator import mul
 import numpy
 
+# Add new functions to h5py.Dataset, names for functions are supposed to be unique in order to avoid conflicts
+def isCXIStack(dataset):
+    items = dataset.attrs.items()
+    if len(items) > 0:
+        return ("axes" == items[0][0])
+    else:
+        return False
+h5py.Dataset.isCXIStack = isCXIStack 
+def getCXIFormat(dataset):
+    N = len(dataset.shape)
+    if dataset.isCXIStack():
+        N -= 1
+    return N
+h5py.Dataset.getCXIFormat = getCXIFormat
+def isCXIText(dataset):
+    return (dataset.dtype.name[-6:] == "string")
+h5py.Dataset.isCXIText = isCXIText
+def getCXIMasks(dataset):
+    masks = {}
+    suppMaskTypes = ["mask_shared","mask"]
+    for maskType in suppMaskTypes:
+        if maskType in dataset.parent.keys():
+            masks[maskType] = dataset.parent[maskType]
+    return masks
+h5py.Dataset.getCXIMasks = getCXIMasks
+def getCXIWidth(dataset):
+    if dataset.isCXIStack():
+        return dataset.shape[2]
+    else:
+        return dataset.shape[1]
+h5py.Dataset.getCXIWidth = getCXIWidth
+def getCXIHeight(dataset):
+    if dataset.isCXIStack():
+        return dataset.shape[1]
+    else:
+        return dataset.shape[0]
+h5py.Dataset.getCXIHeight = getCXIHeight
+
 class CXINavigation(QtGui.QWidget):
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
@@ -25,6 +63,9 @@ class CXINavigation(QtGui.QWidget):
         self.CXINavigationBottom.vbox.addWidget(self.CXITreeBottom)
         self.vbox.addWidget(self.CXINavigationBottom)
 
+        self.viewDatasetChanged = self.CXITreeTop.datasetChanged
+        self.sortDatasetChanged = self.CXITreeBottom.datasetChanged
+
 
 class CXITree(QtGui.QTreeWidget):
     def __init__(self,parent=None):        
@@ -34,7 +75,8 @@ class CXITree(QtGui.QTreeWidget):
         self.itemCollapsed.connect(self.treeChanged)
         self.setHeaderLabels(["CXI-file tree"])
         self.resizeColumnToContents(0)
-        self.currDatasetName = self.currGroupName = None
+        self.currDatasetName = None
+        self.itemClicked.connect(self.handleClick)
     def treeChanged(self):
         self.manageSizes()
     def manageSizes(self):
@@ -66,10 +108,9 @@ class CXITree(QtGui.QTreeWidget):
                     lst.append("")
                     child = QtGui.QTreeWidgetItem(lst)
                 else:
-                    dataset = group[g]
+                    dataset = self.datasets[group[g].name] = group[g]
                     ds_dtype = dataset.dtype.name
                     ds_shape = dataset.shape
-                    self.datasets[group[g].name] = dataset
                     string = "<i>"+ds_dtype+"</i> ("
                     for d in ds_shape:
                         string += str(d)+","
@@ -78,84 +119,49 @@ class CXITree(QtGui.QTreeWidget):
                     lst.append(group[g].name)
                     child = QtGui.QTreeWidgetItem(lst)
                     child.setToolTip(self.columnPath-1,string)
-                    form = ""
-                    if ds_dtype[:6] == 'string':
-                            R = 100
-                            G = 100
-                            B = 100
-                            form += "String Data"
-                            if ds_shape[0] == self.stackSize:
-                                form += " Stack"
-                    else:
-                        if len(ds_shape) == 1:
-                            form += '1D Data'
-                            if ds_shape[0] == self.stackSize:
-                                form += " Stack"
-                        elif len(ds_shape) == 2: 
-                            if ds_shape[0] != self.stackSize:
-                                form += "2D Data"
-                            else:
-                                form += "1D Data Stack"
-                        elif len(ds_shape) == 3:
-                            if ds_shape[0] != self.stackSize:
-                                form += "3D Data"
-                            else:
-                                form += "2D Data Stack"
-                    if form[:2] == "1D":
+                    numDims = dataset.getCXIFormat()
+                    # text or 0D gray
+                    if numDims == 0 or dataset.isCXIText():
+                        R = 100
+                        G = 100
+                        B = 100
+                    # 1D green
+                    elif numDims == 1:
                         R = 0
                         G = 100
                         B = 0
-                    elif form[:2] == "2D":
+                    # 2D blue
+                    elif numDims == 2:
                         R = 0
                         G = 0
                         B = 100
-                    elif form[:2] == "3D":
+                    # 3D red
+                    elif numDims == 3:
                         R = 100
                         G = 0
                         B = 0
-                    print group[g].name,form[-5:]
-                    if form[-5:] == "Stack":
-                        fade = 70
+                    # datsets which are not stacks lighter
+                    if not dataset.isCXIStack():
+                        fade = 50
                         R += fade
                         G += fade
                         B += fade
-                    self.datasets[group[g].name].form = form
                     child.setForeground(0,QtGui.QBrush(QtGui.QColor(R,G,B)))
+                    # make bold if it is a dataset called 'data'
                     if g.rsplit("/",1)[-1] == 'data':
                         font = QtGui.QFont()
                         font.setBold(True)
                         child.setFont(0,font)
                 item.addChild(child)
+            
+    
+
 
 class CXITreeTop(CXITree):
+    datasetChanged = QtCore.Signal(h5py.Dataset)
     def __init__(self,parent=None):        
         CXITree.__init__(self,parent)
         self.itemClicked.connect(self.handleClick)
-    def handleClick(self,item,column):
-        if(item.text(self.columnPath) != ""):
-            self.currDatasetName = str(item.text(self.columnPath))
-            self.currGroupName = str(item.text(self.columnPath).rsplit("/",1)[-1])
-            data = self.datasets[self.currDatasetName]
-            # we shouldn't do this here:
-            #if(numpy.iscomplexobj(data[0])):
-            #    data = numpy.abs(data)
-            if data.form[:2] == "1D":
-                # 1D Plotting
-                pass
-            elif data.form == "2D Data":
-                self.parent.parent.datasetProp.clear()
-                self.parent.parent.view.clear()
-                self.parent.parent.view.loadImage(data)
-                self.parent.parent.statusBar.showMessage("Loaded %s" % (str(item.text(self.columnPath))),1000)
-            elif data.form == "2D Data Stack":
-                self.parent.parent.datasetProp.clear()
-                self.parent.parent.view.clear()
-                self.parent.parent.view.loadStack(data)
-                self.parent.parent.statusBar.showMessage("Loaded slice 0",1000)
-            else:
-                QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets with more than 3 dimensions. The selected dataset has %d dimensions." %(len(data.shape))))
-                return
-            self.parent.parent.datasetProp.setDataset(data);
     def loadData1(self):
         root = self.topLevelItem(0)
         root.setExpanded(True)
@@ -175,22 +181,19 @@ class CXITreeTop(CXITree):
             self.handleClick(root,1)
             return 1
         return 0
+    def handleClick(self,item,column):
+        if(item.text(self.columnPath) in self.datasets.keys()):
+            self.currDataset = self.datasets[item.text(self.columnPath)]
+            self.datasetChanged.emit(self.currDataset)
+
 
 class CXITreeBottom(CXITree):
+    datasetChanged = QtCore.Signal(h5py.Dataset)
     def __init__(self,parent=None):        
         CXITree.__init__(self,parent)
         self.itemClicked.connect(self.handleClick)
     def handleClick(self,item,column):
-        if(item.text(self.columnPath) != ""):
-            self.currDatasetName = str(item.text(self.columnPath))
-            self.currGroupName = str(item.text(self.columnPath).rsplit("/",1)[0])
-            data = self.datasets[self.currDatasetName]
-            if(len(data.shape) == 1):
-                data.form = '1D Data'
-                self.currentDataset = data
-            else:
-                QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(data.shape))))
-                self.currentDataset = None
-            self.parent.parent.view.loaderThread.setSortingIndices(self.currentDataset)
-            self.parent.parent.view.clearTextures()
-            self.parent.parent.view.updateGL()    
+        if(item.text(self.columnPath) in self.datasets.keys()):
+            self.currDataset = self.datasets[item.text(self.columnPath)]
+            self.datasetChanged.emit(self.currDataset)
+
