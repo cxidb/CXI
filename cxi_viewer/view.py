@@ -15,7 +15,7 @@ class ViewStack(QtGui.QStackedWidget):
         self.setStyleSheet("background-color: black;"
                            "selection-background-color: blue;")
         self.view1D = View1D(self)
-        self.view2D = View2D(self)
+        self.view2D = View2D(parent,self)
         self.addWidget(self.view1D)
         self.addWidget(self.view2D)
 
@@ -173,8 +173,9 @@ class ImageLoader(QtCore.QObject):
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
     clearLoaderThread = QtCore.Signal(int)
-    def __init__(self,parent=None):
+    def __init__(self,viewer,parent=None):
         View.__init__(self,parent)
+        self.viewer = viewer
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
         self.zoom = 4.0
@@ -568,7 +569,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.dragging = False
         if(event.pos() == self.dragStart and event.button() == QtCore.Qt.LeftButton):
             self.selectedImage = self.lastHoveredImage
-            self.parent.datasetProp.onImageSelected(self.selectedImage)
+            self.viewer.datasetProp.onImageSelected(self.selectedImage)
 # #            self.parent.datasetProp.recalculateSelectedSlice()
 #             if(self.selectedImage is not None):
 #                 self.parent.datasetProp.onImageSelected(self.selectedImage)
