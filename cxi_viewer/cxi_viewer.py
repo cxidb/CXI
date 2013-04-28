@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import sys
+import sys,os
 from OpenGL.GL import *
 from OpenGL.GLU import *
 #from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
@@ -31,6 +31,10 @@ Multiple tags per image
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
+        styleFile=os.path.join(os.path.split(__file__)[0],"darkorange.stylesheet")
+        with open(styleFile,"r") as fh:
+            self.setStyleSheet(fh.read())
+
         self.statusBar = self.statusBar()
         self.statusBar.showMessage("Initializing...")
         self.init_menus()
