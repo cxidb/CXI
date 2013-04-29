@@ -7,6 +7,7 @@ import math
 from matplotlib import colors
 from matplotlib import cm
 import pyqtgraph
+import OpenGL.GL.ARB.texture_float
 
 class ViewStack(QtGui.QStackedWidget):
     def __init__(self,parent=None):
@@ -16,8 +17,8 @@ class ViewStack(QtGui.QStackedWidget):
                            "selection-background-color: blue;")
         self.view1D = View1D(self)
         self.view2D = View2D(parent,self)
-        self.addWidget(self.view1D)
         self.addWidget(self.view2D)
+        self.addWidget(self.view1D)
 
 class View(object):
     def __init__(self,parent=None):        
@@ -136,39 +137,23 @@ class ImageLoader(QtCore.QObject):
         self.view = view
         self.loaded = {}
         self.imageData = {}
-        self.mappable = cm.ScalarMappable()
-        self.setNorm()
-        self.setColormap()
+        self.maskData = {}
     @QtCore.Slot(int,int)
     def loadImage(self,img):
         if(img in self.loaded):
            return
         self.loaded[img] = True
-        img_sorted = self.view.getSortedIndex(img)
-        data = self.view.getData(2,img_sorted)
-        mask = self.view.getMask(2,img_sorted)
-        self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth(),4),dtype=numpy.uint8)
-        self.imageData[img][:,:,:] = self.mappable.to_rgba(data,None,True)[:,:,:]
-        if mask!=None:
-            self.imageData[img][:,:,3] = 255*mask
+        #img_sorted = self.view.getSortedIndex(img)
+        data = self.view.getData(2,img)
+        mask = self.view.getMask(2,img)
+        self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
+        self.imageData[img] = data
+        self.maskData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.uint32)
+        self.maskData[img] = mask
         self.imageLoaded.emit(img)
     def clear(self):
         self.loaded = {}
-    # COLORMAP
-    def setColormap(self,colormapName='jet'):
-        self.mappable.set_cmap(colormapName)
-    def setNorm(self,scaling='log',vmin=1.,vmax=10000.,clip=True,gamma=1):
-        self.normScaling = scaling
-        if scaling == 'lin':
-            f = lambda x: x
-        elif scaling == 'pow':
-            gamma = self.view.parent.datasetProp.displayGamma.value()
-            f = lambda x: x**gamma
-        elif scaling == 'log':
-            f = lambda x: numpy.log10(x)
-        norm = FunctionNorm(f,vmin,vmax,clip)
-        self.mappable.set_norm(norm)
-        self.mappable.set_clim(vmin,vmax)
+        self.imageData = {}
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
@@ -213,6 +198,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         while(self.imageLoader.isRunning()):
             self.imageLoader.quit()
             QtCore.QThread.sleep(1)
+
     def initializeGL(self):
         glClearColor(0.0, 0.0, 0.0, 1.0)
         glClearDepth(1.0)
@@ -237,20 +223,104 @@ class View2D(View,QtOpenGL.QGLWidget):
         painter.drawEllipse(0,0,100,100)
         painter.end()
         self.circle_texture = self.bindTexture(self.circle_image,GL_TEXTURE_2D,GL_RGBA,QtOpenGL.QGLContext.LinearFilteringBindOption)
+        self.initShaders()
+        self.initColormapTextures()
+    def initShaders(self):
+        if not glUseProgram:
+            print 'Missing Shader Objects!'
+            sys.exit(1)
+        self.makeCurrent()
+        self.shader = compileProgram(
+        compileShader('''
+            void main()
+            {
+                //Transform vertex by modelview and projection matrices
+                gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+ 
+                 // Forward current color and texture coordinates after applying texture matrix
+                gl_FrontColor = gl_Color;
+                gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;
+            }
+        ''',GL_VERTEX_SHADER),
+        compileShader('''
+            uniform sampler2D cmap;
+            uniform sampler2D data;
+            uniform int norm;
+            uniform float vmin;
+            uniform float vmax;
+            uniform float gamma;
+            void main()
+            {
+                vec2 uv = gl_TexCoord[0].xy;
+                vec4 color = texture2D(data, uv);
+                float scale = (vmax-vmin);
+                float offset = vmin;
+                uv[0] = (color.a-offset);
+                uv[1] = 0.0;
+                if(norm == 0){
+                 // linear
+                  uv[0] /= scale;
+                }else if(norm == 1){
+                 // log
+//                 uv[0] = (uv[0] + 1.0 * exp(1.0))/scale;
+//                 uv[0] = log(uv[0]);
+                 scale = log(scale+1.0);
+                 uv[0] = log(uv[0]+1.0)/scale;
+                }else if(norm == 2){
+                  // power
+//                  uv[0] = pow((uv[0] + scale)/scale,gamma)-1.0;
+                 scale = pow(scale+1.0,gamma)-1.0;
+                 uv[0] = (pow(uv[0]+1.0,gamma)-1.0)/scale;
+                }
+                if(uv[0] >= 1.0){
+                  uv[0] = 0.99;
+                }
+                if(uv[0] < 0.0){
+                  uv[0] = 0.0;
+                }
+                color = texture2D(cmap,uv);
+                gl_FragColor = color;
+            }
+    ''',GL_FRAGMENT_SHADER),
+    )
+    def initColormapTextures(self):
+        n = 1024
+        a = numpy.linspace(0.,1.,n)
+        maps=[m for m in cm.datad if not m.endswith("_r")]
+        mappable = cm.ScalarMappable()
+        mappable.set_norm(colors.Normalize())
+        self.colormapTextures = {}
+        for m in maps:
+            mappable.set_cmap(m)
+            a_rgb = numpy.zeros(shape=(n,4),dtype=numpy.uint8)
+            temp = mappable.to_rgba(a,None,True)[:,:]
+            a_rgb[:,2] = temp[:,2]
+            a_rgb[:,1] = temp[:,1]
+            a_rgb[:,0] = temp[:,0]
+            a_rgb[:,3] = 0xff
+            self.colormapTextures[m] = glGenTextures(1)
+            # I don't know how much of this I need
+            glEnable(GL_BLEND)
+            glEnable(GL_TEXTURE_2D)
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+            glBindTexture(GL_TEXTURE_2D, self.colormapTextures[m])
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, n,1, 0, GL_RGBA, GL_UNSIGNED_BYTE, a_rgb);
+
     def resizeGL(self, w, h):
         '''
         Resize the GL window 
         '''
         if(self.has_data):
             self.setStackWidth(self.stackWidth)
-            self.clearTextures()
             self.updateGL()
         glViewport(0, 0, w, h)
         glMatrixMode(GL_PROJECTION)
         glLoadIdentity()
         if(w and h):
-            gluOrtho2D(0.0, w, 0.0, h);
-#            glScalef(1., -1., 1.)                
+            gluOrtho2D(0.0, w, 0.0, h);              
         glMatrixMode(GL_MODELVIEW);
         glLoadIdentity(); 
 
@@ -388,8 +458,26 @@ class View2D(View,QtOpenGL.QGLWidget):
         (x,y,z) = self.imageToScene(img,imagePos='BottomLeft',withBorder=False)
         glTranslatef(x,y,z)
 
-        glEnable(GL_TEXTURE_2D)
+        glUseProgram(self.shader)
+        glActiveTexture(GL_TEXTURE0+1)
+        data_texture_loc = glGetUniformLocation(self.shader, "data")
+        glUniform1i(data_texture_loc,1)
         glBindTexture (GL_TEXTURE_2D, self.textureIds[img]);
+
+        glActiveTexture(GL_TEXTURE0+2)
+        cmap_texture_loc = glGetUniformLocation(self.shader, "cmap")
+        glUniform1i(cmap_texture_loc,2)
+        glBindTexture (GL_TEXTURE_2D, self.colormapTextures[self.colormapText]);
+
+        loc = glGetUniformLocation(self.shader, "vmin")
+        glUniform1f(loc,self.normVmin)
+        loc = glGetUniformLocation(self.shader, "vmax")
+        glUniform1f(loc,self.normVmax)
+        loc = glGetUniformLocation(self.shader, "gamma")
+        glUniform1f(loc,self.normGamma)
+        loc = glGetUniformLocation(self.shader, "norm")
+        glUniform1i(loc,self.normScalingValue)
+
         glColor3f(1.0,1.0,1.0);
         glBegin (GL_QUADS);
         glTexCoord2f (0.0, 0.0);
@@ -400,8 +488,11 @@ class View2D(View,QtOpenGL.QGLWidget):
         glVertex3f (img_width, 0, 0.0);
         glTexCoord2f (0.0, 1.0);
         glVertex3f (0, 0, 0.0);
-        glEnd ();
-        glDisable(GL_TEXTURE_2D)
+        glEnd ();      
+        # Activate again the original texture unit
+        glActiveTexture(GL_TEXTURE0)  
+
+        glUseProgram(0)
         if(img == self.lastHoveredImage):
             glPushMatrix()
             glColor3f(1.0,1.0,1.0);
@@ -420,6 +511,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         '''
         Drawing routine
         '''
+        if(not self.isValid() or not self.isVisible()):
+            return
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
         glLoadIdentity()
         # Set GL origin in the middle of the widget
@@ -479,15 +572,13 @@ class View2D(View,QtOpenGL.QGLWidget):
         return visible
     @QtCore.Slot(int)
     def generateTexture(self,img):
-        imageData = self.loaderThread.imageData[img][:,:,:]
+        imageData = self.loaderThread.imageData[img][:]
         texture = glGenTextures(1)
-        glEnable(GL_BLEND)
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
         glBindTexture(GL_TEXTURE_2D, texture)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageData.shape[1], imageData.shape[0], 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
+        glTexImage2D(GL_TEXTURE_2D, 0, OpenGL.GL.ARB.texture_float.GL_ALPHA32F_ARB, imageData.shape[1], imageData.shape[0], 0, GL_ALPHA, GL_FLOAT, imageData);
         self.textureIds[img] = texture
         self.updateGL()
     def updateTextures(self,images):
@@ -725,14 +816,171 @@ class View2D(View,QtOpenGL.QGLWidget):
         return self.subplotBorder/self.zoom
     def refreshDisplayProp(self,datasetProp):
         if datasetProp != None:
+            self.normScaling = datasetProp["normScaling"]
+            if(self.normScaling == 'lin'):
+                self.normScalingValue = 0
+            elif(self.normScaling == 'log'):
+                self.normScalingValue = 1
+            elif(self.normScaling == 'pow'):                
+                self.normScalingValue = 2
+            self.normVmin = datasetProp["normVmin"]
+            self.normVmax = datasetProp["normVmax"]
+            self.normGamma = datasetProp["normGamma"]
+            self.colormapText = datasetProp["colormapText"]
+
             self.setMask(datasetProp["maskDataset"],datasetProp["maskOutBits"])
-            self.loaderThread.setNorm(datasetProp["normScaling"],datasetProp["normVmin"],datasetProp["normVmax"],datasetProp["normClip"],datasetProp["normGamma"])
-            self.loaderThread.setColormap(datasetProp["colormapText"])
             self.setStackWidth(datasetProp["imageStackSubplotsValue"])
-        self.clearTextures()
         self.updateGL()
         
 
+# Temporary code to fix a bug in PyOpenGL which validates shaders too early
 
+class ShaderProgram( int ):
+    """Integer sub-class with context-manager operation"""
+    def __enter__( self ):
+        """Start use of the program"""
+        glUseProgram( self )
+    def __exit__( self, typ, val, tb ):
+        """Stop use of the program"""
+        glUseProgram( 0 )
+    
+    def check_validate( self ):
+        """Check that the program validates
+        
+        Validation has to occur *after* linking/loading
+        
+        raises RuntimeError on failures
+        """
+        glValidateProgram( self )
+        validation = glGetProgramiv( self, GL_VALIDATE_STATUS )
+        if validation == GL_FALSE:
+            raise RuntimeError(
+                """Validation failure (%s): %s"""%(
+                validation,
+                glGetProgramInfoLog( self ),
+            ))
+        return self
 
+    def check_linked( self ):
+        """Check link status for this program
+        
+        raises RuntimeError on failures
+        """
+        link_status = glGetProgramiv( self, GL_LINK_STATUS )
+        if link_status == GL_FALSE:
+            raise RuntimeError(
+                """Link failure (%s): %s"""%(
+                link_status,
+                glGetProgramInfoLog( self ),
+            ))
+        return self
+
+    def retrieve( self ):
+        """Attempt to retrieve binary for this compiled shader
+        
+        Note that binaries for a program are *not* generally portable,
+        they should be used solely for caching compiled programs for 
+        local use; i.e. to reduce compilation overhead.
+        
+        returns (format,binaryData) for the shader program
+        """
+        from OpenGL.constants import GLint,GLenum 
+        from OpenGL.arrays import GLbyteArray
+        size = GLint()
+        glGetProgramiv( self, get_program_binary.GL_PROGRAM_BINARY_LENGTH, size )
+        result = GLbyteArray.zeros( (size.value,))
+        size2 = GLint()
+        format = GLenum()
+        get_program_binary.glGetProgramBinary( self, size.value, size2, format, result )
+        return format.value, result 
+    def load( self, format, binary ):
+        """Attempt to load binary-format for a pre-compiled shader
+        
+        See notes in retrieve
+        """
+        get_program_binary.glProgramBinary( self, format, binary, len(binary))
+        self.check_validate()
+        self.check_linked()
+        return self
+
+def compileProgram(*shaders, **named):
+    """Create a new program, attach shaders and validate
+
+    shaders -- arbitrary number of shaders to attach to the
+        generated program.
+    separable (keyword only) -- set the separable flag to allow 
+        for partial installation of shader into the pipeline (see 
+        glUseProgramStages)
+    retrievable (keyword only) -- set the retrievable flag to 
+        allow retrieval of the program binary representation, (see 
+        glProgramBinary, glGetProgramBinary)
+
+    This convenience function is *not* standard OpenGL,
+    but it does wind up being fairly useful for demos
+    and the like.  You may wish to copy it to your code
+    base to guard against PyOpenGL changes.
+
+    Usage:
+
+        shader = compileProgram(
+            compileShader( source, GL_VERTEX_SHADER ),
+            compileShader( source2, GL_FRAGMENT_SHADER ),
+        )
+        glUseProgram( shader )
+
+    Note:
+        If (and only if) validation of the linked program
+        *passes* then the passed-in shader objects will be
+        deleted from the GL.
+
+    returns ShaderProgram() (GLuint) program reference
+    raises RuntimeError when a link/validation failure occurs
+    """
+    program = glCreateProgram()
+    if named.get('separable'):
+        glProgramParameteri( program, separate_shader_objects.GL_PROGRAM_SEPARABLE, GL_TRUE )
+    if named.get('retrievable'):
+        glProgramParameteri( program, get_program_binary.GL_PROGRAM_BINARY_RETRIEVABLE_HINT, GL_TRUE )
+    for shader in shaders:
+        glAttachShader(program, shader)
+    program = ShaderProgram( program )
+    glLinkProgram(program)
+#    program.check_validate()
+    program.check_linked()
+    for shader in shaders:
+        glDeleteShader(shader)
+    return program
+def as_bytes( s ):
+    """Utility to retrieve s as raw string (8-bit)"""
+    if isinstance( s, unicode ):
+        s = s.encode( ) # TODO: can we use latin-1 or utf-8?
+    return s
+def compileShader( source, shaderType ):
+    """Compile shader source of given type
+
+    source -- GLSL source-code for the shader
+    shaderType -- GLenum GL_VERTEX_SHADER, GL_FRAGMENT_SHADER, etc,
+
+    returns GLuint compiled shader reference
+    raises RuntimeError when a compilation failure occurs
+    """
+    if isinstance( source, (str,unicode)):
+        source = [ source ]
+    source = [ as_bytes(s) for s in source ]
+    shader = glCreateShader(shaderType)
+    glShaderSource( shader, source )
+    glCompileShader( shader )
+    result = glGetShaderiv( shader, GL_COMPILE_STATUS )
+    if not(result):
+        # TODO: this will be wrong if the user has
+        # disabled traditional unpacking array support.
+        raise RuntimeError(
+            """Shader compile failure (%s): %s"""%(
+                result,
+                glGetShaderInfoLog( shader ),
+            ),
+            source,
+            shaderType,
+        )
+    return shader
 

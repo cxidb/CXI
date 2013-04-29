@@ -292,15 +292,15 @@ class DatasetProp(QtGui.QWidget):
         else:
             P["normScaling"] = "pow"
         P["normGamma"] = self.displayGamma.value()
-        if P["normScaling"] == "lin":
-            pass
-        elif P["normScaling"] == "log" and (P["normVmin"] > 0. and P["normVmax"] > 0):
-            pass
-        elif P["normScaling"] == "pow" and P["normGamma"] < 1 and (P["normVmin"] > 0. and P["normVmax"] > 0):
-            pass
-        else:
-            P["normVmin"] = 10.
-            P["normVmax"] = 1000.
+        # if P["normScaling"] == "lin":
+        #     pass
+        # elif P["normScaling"] == "log" and (P["normVmin"] > 0. and P["normVmax"] > 0):
+        #     pass
+        # elif P["normScaling"] == "pow" and P["normGamma"] < 1 and (P["normVmin"] > 0. and P["normVmax"] > 0):
+        #     pass
+        # else:
+        #     P["normVmin"] = 10.
+        #     P["normVmax"] = 1000.
         self.displayMin.setValue(P["normVmin"])
         self.displayMax.setValue(P["normVmax"])
         self.intensityHistogramRegion.setRegion([self.displayMin.value(),self.displayMax.value()])
