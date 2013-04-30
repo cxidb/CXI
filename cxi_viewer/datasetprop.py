@@ -19,7 +19,7 @@ def sizeof_fmt(num):
 # - currDisplayProp['propertyBla'] => class variables defining current property
 # - setProperty                    => stores property specified in widgets to class variables propertyBla,propertyBlabla,...
 #(- refreshProperty                => refreshes widgets that have dependencies on dataset )
-# - clearProperty                  => sets property to default + refreshes property if refreshPropertyWidget exists
+# - clearProperty                  => sets property to default (+ refreshes property)
 #
 class DatasetProp(QtGui.QWidget):
     displayPropChanged = QtCore.Signal(dict)
@@ -115,6 +115,7 @@ class DatasetProp(QtGui.QWidget):
         hbox.addWidget(self.displayClip)
         hbox.addStretch()
         self.displayColormap = QtGui.QPushButton("Colormap",parent=self)
+        self.displayColormap.setFixedSize(QtCore.QSize(100,30))
         self.displayColormap.setMenu(self.viewer.colormapMenu)
         hbox.addWidget(self.displayColormap)
 
@@ -138,43 +139,6 @@ class DatasetProp(QtGui.QWidget):
         self.displayBox.vbox.addLayout(vbox)
         self.displayBox.setLayout(self.displayBox.vbox)
 
-        # property: MASK
-        # maskMask
-        self.maskBox = QtGui.QGroupBox("Mask out pixels");
-        self.maskBox.vbox = QtGui.QVBoxLayout()
-        hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Pixelmask:"))
-        self.maskMask = QtGui.QComboBox(parent=self)
-        hbox.addWidget(self.maskMask)
-        self.maskBox.vbox.addLayout(hbox)
-        # maskOutBits
-        vbox = QtGui.QVBoxLayout()
-        maskInvalidPix = QtGui.QCheckBox("Invalid",parent=self)    
-        maskSaturatedPix = QtGui.QCheckBox("Saturated",parent=self)
-        maskHotPix = QtGui.QCheckBox("Hot",parent=self)
-        maskDeadPix = QtGui.QCheckBox("Dead",parent=self)
-        maskShadowedPix = QtGui.QCheckBox("Shadowed",parent=self)
-        maskPeakmaskPix = QtGui.QCheckBox("In peakmask",parent=self)
-        maskIgnorePix = QtGui.QCheckBox("To be ignored",parent=self)
-        maskBadPix = QtGui.QCheckBox("Bad",parent=self)
-        maskResolutionPix = QtGui.QCheckBox("Out of resolution limits",parent=self)
-        maskMissingPix = QtGui.QCheckBox("Missing",parent=self)
-        maskHaloPix = QtGui.QCheckBox("In Halo",parent=self)
-        self.masksBoxes = {'invalid' : maskInvalidPix,
-                           'saturated' : maskSaturatedPix,
-                           'hot' : maskHotPix,
-                           'dead' : maskDeadPix,
-                           'shadowed' : maskShadowedPix,
-                           'peakmask' : maskPeakmaskPix,
-                           'ignore' : maskIgnorePix,
-                           'bad' : maskBadPix,
-                           'resolution' : maskResolutionPix,
-                           'missing' : maskMissingPix,
-                           'halo' : maskHaloPix}
-        self.maskBox.vbox.addLayout(vbox)
-        for maskKey in self.masksBoxes:
-            vbox.addWidget(self.masksBoxes[maskKey])
-        self.maskBox.setLayout(self.maskBox.vbox)
         # properties: IMAGE
         self.imageBox = QtGui.QGroupBox("Image Properties");
         self.imageBox.vbox = QtGui.QVBoxLayout()
@@ -197,7 +161,6 @@ class DatasetProp(QtGui.QWidget):
         self.vboxScroll.addWidget(self.imageStackBox)
         self.vboxScroll.addWidget(self.imageBox)
         self.vboxScroll.addWidget(self.displayBox)
-        self.vboxScroll.addWidget(self.maskBox)
         self.vboxScroll.addStretch()
         self.setLayout(self.vbox)
         # clear all properties
@@ -212,10 +175,6 @@ class DatasetProp(QtGui.QWidget):
         self.displayPow.toggled.connect(self.emitDisplayProp)
         self.displayGamma.editingFinished.connect(self.emitDisplayProp)
         self.viewer.colormapActionGroup.triggered.connect(self.emitDisplayProp)
-#        self.displayColormap.released.connect(self.emitDisplayProp)
-        for maskKey in self.masksBoxes:
-            self.masksBoxes[maskKey].stateChanged.connect(self.emitDisplayProp)
-        self.maskMask.currentIndexChanged.connect(self.emitDisplayProp)
     def clear(self):
         self.clearDisplayProp()
         self.clearDataset()
@@ -223,10 +182,8 @@ class DatasetProp(QtGui.QWidget):
         self.clearImageStackSubplots()
         self.clearNorm()
         self.clearColormap()
-        self.clearMask()
     # DATASET
     def setDataset(self,dataset=None,format=2):
-        if format == 2
         self.dataset = dataset
         if dataset != None:
             self.dataset = dataset
@@ -248,7 +205,6 @@ class DatasetProp(QtGui.QWidget):
                 self.imageStackBox.hide()
         else:
             self.clearDataset()
-        self.refreshMask()
     def clearDataset(self):
         self.dataset = None
         self.dimensionality.setText("Dimensions: ")
@@ -293,17 +249,6 @@ class DatasetProp(QtGui.QWidget):
         else:
             P["normScaling"] = "pow"
         P["normGamma"] = self.displayGamma.value()
-        if P["normScaling"] == "lin":
-            pass
-        elif P["normScaling"] == "log" and (P["normVmin"] > 0. and P["normVmax"] > 0):
-            pass
-        elif P["normScaling"] == "pow" and P["normGamma"] < 1 and (P["normVmin"] > 0. and P["normVmax"] > 0):
-            pass
-        else:
-            P["normVmin"] = 10.
-            P["normVmax"] = 1000.
-        self.displayMin.setValue(P["normVmin"])
-        self.displayMax.setValue(P["normVmax"])
         self.intensityHistogramRegion.setRegion([self.displayMin.value(),self.displayMax.value()])
     def clearNorm(self):
         self.displayMin.setValue(10.)
@@ -330,47 +275,11 @@ class DatasetProp(QtGui.QWidget):
     def clearImageStackSubplots(self):
         self.imageStackSubplots.setValue(1)
         self.setImageStackSubplots()
-    # MASK
-    def setMask(self):
-        P = self.currDisplayProp
-        maskText = self.maskMask.currentText()
-        if self.dataset != None and maskText != "none" and maskText != "":
-            P["maskDataset"] = self.dataset.getCXIMasks()[maskText]
-        else:
-            P["maskDataset"] = None
-        PIXELMASK_BITS = {'perfect' : 0,# PIXEL_IS_PERFECT
-                          'invalid' : 1,# PIXEL_IS_INVALID
-                          'saturated' : 2,# PIXEL_IS_SATURATED
-                          'hot' : 4,# PIXEL_IS_HOT
-                          'dead' : 8,# PIXEL_IS_DEAD
-                          'shadowed' : 16, # PIXEL_IS_SHADOWED
-                          'peakmask' : 32, # PIXEL_IS_IN_PEAKMASK
-                          'ignore' : 64, # PIXEL_IS_TO_BE_IGNORED
-                          'bad' : 128, # PIXEL_IS_BAD
-                          'resolution' : 256, # PIXEL_IS_OUT_OF_RESOLUTION_LIMITS
-                          'missing' : 512, # PIXEL_IS_MISSING
-                          'halo' : 1024} # PIXEL_IS_IN_HALO
-        P["maskOutBits"] = 0
-        for maskKey in self.masksBoxes:
-            if self.masksBoxes[maskKey].isChecked():
-                P["maskOutBits"] |= PIXELMASK_BITS[maskKey]
-    def clearMask(self):
-        P = self.currDisplayProp
-        P["maskDataset"] = None
-        P["maskOutBits"] = 0
-    def refreshMask(self):
-        self.clearMask()
-        self.maskMask.clear()
-        self.maskMask.addItem("none")
-        if self.dataset != None:
-            for maskType in self.dataset.getCXIMasks().keys():
-                self.maskMask.addItem(maskType)
     # update and emit current diplay properties
     def emitDisplayProp(self,foovalue=None):
         self.setImageStackSubplots()
         self.setNorm()
         self.setColormap()
-        self.setMask()
         self.displayPropChanged.emit(self.currDisplayProp)
         
 

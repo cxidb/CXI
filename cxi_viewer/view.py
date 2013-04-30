@@ -2,36 +2,46 @@ from OpenGL.GL import *
 from OpenGL.GLU import *
 #from PyQt4 import QtGui, QtCore, QtOpenGL, Qt
 from PySide import QtGui, QtCore, QtOpenGL
-import numpy
+import numpy,h5py
 import math
 from matplotlib import colors
 from matplotlib import cm
 import pyqtgraph
+import cxitree
 
-class ViewStack(QtGui.QStackedWidget):
+class ViewSplitter(QtGui.QSplitter):
     def __init__(self,parent=None):
-        QtGui.QStackedWidget.__init__(self,parent)
-        self.setContentsMargins(0,0,0,0)
-        self.setStyleSheet("background-color: black;"
-                           "selection-background-color: blue;")
-        self.view1D = View1D(self)
+        QtGui.QSplitter.__init__(self,parent)
+        self.setOrientation(QtCore.Qt.Vertical)
+
         self.view2D = View2D(self)
-        self.addWidget(self.view1D)
         self.addWidget(self.view2D)
 
-class View(object):
-    def __init__(self,parent=None):        
+        self.view1D = View1D(self)
+        self.view1D.hide()
+        self.addWidget(self.view1D)
+
+        self.setSizes([1000,1000])
+
+
+class View(QtCore.QObject):
+    needDataset = QtCore.Signal(str)
+    datasetChanged = QtCore.Signal(h5py.Dataset,str)
+    def __init__(self,parent=None,datasetMode="image"):
+        QtCore.QObject.__init__(self)
         self.parent = parent
+        self.datasetMode = datasetMode
         self.setData()
         self.setMask()
         self.setSortingIndices()
     # DATA
-    def setData(self,data=None):
-        self.data = data
+    def setData(self,dataset=None):
+        self.data = dataset
         if self.data != None:
             self.has_data = True
         else:
             self.has_data = False
+        self.datasetChanged.emit(dataset,self.datasetMode)
     def getData(self,nDims=2,img_sorted=0):
         if self.data == None:
             return None
@@ -46,6 +56,7 @@ class View(object):
     def setMask(self,maskDataset=None,maskOutBits=0):
         self.mask = maskDataset
         self.maskOutBits = maskOutBits
+        self.datasetChanged.emit(maskDataset,"mask")
     def getMask(self,nDims=2,img_sorted=0):
         if self.mask == None:
             return None
@@ -53,32 +64,41 @@ class View(object):
             if self.mask.isCXIStack():
                 mask = self.mask[img_sorted,:,:]
             else:
-                mask = self.mask[:,:]        
+                mask = self.mask[:,:]
             return ((mask & self.maskOutBits) == 0)
     # SORTING
-    def setSortingIndices(self, data=None):
-        if data != None:
-            self.sortingIndices = numpy.argsort(data)
+    def setSortingIndices(self, dataset=None):
+        if dataset != None:
+            self.sortingIndices = numpy.argsort(dataset)
         else:
             self.sortingIndices = None
+        self.datasetChanged.emit(dataset,"sorting")
     def getSortedIndex(self,index):
         if self.sortingIndices != None:
             return self.sortingIndices[index]
         else:
             return index
+    def dragEnterEvent(self, e):
+        if e.mimeData().hasFormat('text/plain'):
+            e.accept()
+        else:
+            e.ignore() 
+    def dropEvent(self, e):
+        self.needDataset.emit(e.mimeData().text())
 
-class View1D(View,QtGui.QWidget):
+class View1D(View,QtGui.QFrame):
     def __init__(self,parent=None):
-        View.__init__(self,parent)
-        QtGui.QWidget.__init__(self,parent)
+        View.__init__(self,parent,"plot")
+        QtGui.QFrame.__init__(self,parent)
         self.hbox = QtGui.QHBoxLayout(self)
-        margin = 60
+        margin = 20
         self.hbox.setContentsMargins(margin,margin,margin,margin)
         self.plot = pyqtgraph.PlotWidget()
         self.initPlot()
         self.hbox.addWidget(self.plot)
         self.setLayout(self.hbox)
         self.p = None
+        self.setAcceptDrops(True)
     def initPlot(self):
         space = 60
         self.plot.getAxis("top").setHeight(space)
@@ -88,36 +108,43 @@ class View1D(View,QtGui.QWidget):
     def loadData(self,dataset):
         self.setData(dataset)
         data = self.getData(1)
-        self.plot.setLabel("bottom","event #")
+        self.plot.setLabel("bottom","index")
         self.plot.setLabel("left",self.data.name)
         if self.p == None:
             self.p = self.plot.plot(data, pen=(255,0,0))
         else:
             self.p.setData(data)
-        #self.showGrid(x=True, y=True)
 
 class FunctionNorm(colors.Normalize):
-    def __init__(self, normFunction, vmin=None, vmax=None, clip=False):
+    def __init__(self, normFunction, vmin=None, vmax=None, clip=False,offsetMinValue=None):
         colors.Normalize.__init__(self,vmin,vmax,clip)
         self.function = normFunction
         self.clip = clip
+        self.offsetMinValue = offsetMinValue
     def __call__(self,value,clip=None):
         clip = self.clip
         value_clipped = numpy.array(value,dtype="float")
+        if self.offsetMinValue != None:
+            offset = value_clipped[numpy.isfinite(value_clipped)].min() - self.offsetMinValue
+        else:
+            offset = 0
+        value_clipped -= offset
+        vmin = self.vmin - offset
+        vmax = self.vmax - offset
+        fvmin = self.function(vmin)
+        fvmax = self.function(vmax)
         mask = numpy.isfinite(value_clipped) == False
-        fvmin = self.function(self.vmin)
-        fvmax = self.function(self.vmax)
         # check validity of given vmin and vmax
-        if self.vmin > self.vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
-            return numpy.ma.array(zeros_like(value),mask=ones_like(value),fill_value=1e+20)
+        if vmin > vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
+            return numpy.ma.array(numpy.zeros_like(value),mask=numpy.ones_like(value),fill_value=1e+20)
         # clipping / masking for values out of range
-        above = value_clipped > self.vmax
+        above = value_clipped > vmax
         if above.sum() > 0:
-            if clip: value_clipped[above] = self.vmax
+            if clip: value_clipped[above] = vmax
             else: mask |= above
-        below = value_clipped < self.vmin
+        below = value_clipped < vmin
         if below.sum() > 0:
-            if clip: value_clipped[below] = self.vmin
+            if clip: value_clipped[below] = vmin
             else: mask |= below
         # apply norm function
         outvalue = self.function(value_clipped)
@@ -161,20 +188,23 @@ class ImageLoader(QtCore.QObject):
         self.normScaling = scaling
         if scaling == 'lin':
             f = lambda x: x
+            offsetMinValue = None
         elif scaling == 'pow':
-            gamma = self.view.parent.datasetProp.displayGamma.value()
             f = lambda x: x**gamma
+            offsetMinValue = 0
         elif scaling == 'log':
             f = lambda x: numpy.log10(x)
-        norm = FunctionNorm(f,vmin,vmax,clip)
+            offsetMinValue = 1
+        norm = FunctionNorm(f,vmin,vmax,clip,offsetMinValue)
         self.mappable.set_norm(norm)
         self.mappable.set_clim(vmin,vmax)
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
     clearLoaderThread = QtCore.Signal(int)
+    imageSelected = QtCore.Signal(int) 
     def __init__(self,parent=None):
-        View.__init__(self,parent)
+        View.__init__(self,parent,"image")
         QtOpenGL.QGLWidget.__init__(self,parent)
         self.translation = [0,0]
         self.zoom = 4.0
@@ -207,6 +237,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.loadingImageAnimationTimer = QtCore.QTimer()
         self.loadingImageAnimationTimer.timeout.connect(self.incrementLoadingImageAnimationFrame)
         self.loadingImageAnimationTimer.start(100)
+
+        self.setAcceptDrops(True)
 
     def stopThreads(self):
         while(self.imageLoader.isRunning()):
@@ -568,7 +600,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.dragging = False
         if(event.pos() == self.dragStart and event.button() == QtCore.Qt.LeftButton):
             self.selectedImage = self.lastHoveredImage
-            self.parent.datasetProp.onImageSelected(self.selectedImage)
+            #self.viewer.datasetProp.onImageSelected(self.selectedImage)
+            self.imageSelected.emit(self.selectedImage)
 # #            self.parent.datasetProp.recalculateSelectedSlice()
 #             if(self.selectedImage is not None):
 #                 self.parent.datasetProp.onImageSelected(self.selectedImage)
@@ -724,7 +757,6 @@ class View2D(View,QtOpenGL.QGLWidget):
         return self.subplotBorder/self.zoom
     def refreshDisplayProp(self,datasetProp):
         if datasetProp != None:
-            self.setMask(datasetProp["maskDataset"],datasetProp["maskOutBits"])
             self.loaderThread.setNorm(datasetProp["normScaling"],datasetProp["normVmin"],datasetProp["normVmax"],datasetProp["normClip"],datasetProp["normGamma"])
             self.loaderThread.setColormap(datasetProp["colormapText"])
             self.setStackWidth(datasetProp["imageStackSubplotsValue"])

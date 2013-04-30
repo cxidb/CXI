@@ -31,7 +31,9 @@ Multiple tags per image
 class Viewer(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
-        styleFile=os.path.join(os.path.split(__file__)[0],"darkorange.stylesheet")
+        
+        fn = "cxi.stylesheet"
+        styleFile=os.path.join(os.path.split(__file__)[0],fn)
         with open(styleFile,"r") as fh:
             self.setStyleSheet(fh.read())
 
@@ -39,7 +41,7 @@ class Viewer(QtGui.QMainWindow):
         self.statusBar.showMessage("Initializing...")
         self.init_menus()
         self.splitter = QtGui.QSplitter(self)
-        self.view = ViewStack(self)
+        self.view = ViewSplitter(self)
         self.datasetProp = DatasetProp(self)
         self.CXINavigation = CXINavigation(self)
         self.splitter.addWidget(self.CXINavigation)
@@ -62,15 +64,23 @@ class Viewer(QtGui.QMainWindow):
         if(not settings.contains("scrollDirection")):
             settings.setValue("scrollDirection", 1);  
         QtCore.QTimer.singleShot(0,self.after_show)
-
-        self.CXINavigation.CXITreeTop.datasetChanged.connect(self.handleViewDatasetChanged)
-        self.CXINavigation.CXITreeBottom.datasetChanged.connect(self.handleSortDatasetChanged)
+        
+        self.CXINavigation.CXITree.datasetClicked.connect(self.handleDatasetClicked)
+        self.view.view1D.needDataset.connect(self.handleNeedDatasetPlot)
+        self.view.view1D.datasetChanged.connect(self.handleDatasetChanged)
+        self.view.view2D.needDataset.connect(self.handleNeedDatasetImage)
+        self.view.view2D.datasetChanged.connect(self.handleDatasetChanged)
+        self.CXINavigation.datasetBoxes["image"].button.needDataset.connect(self.handleNeedDatasetImage)
+        self.CXINavigation.datasetBoxes["mask"].button.needDataset.connect(self.handleNeedDatasetMask)
+        self.CXINavigation.maskMenu.triggered.connect(self.handleMaskOutBitsChanged)
+        self.CXINavigation.datasetBoxes["sorting"].button.needDataset.connect(self.handleNeedDatasetSorting)
+        self.CXINavigation.datasetBoxes["plot"].button.needDataset.connect(self.handleNeedDatasetPlot)
         self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
+        self.view.view2D.imageSelected.connect(self.datasetProp.onImageSelected)
     def after_show(self):
         if(len(sys.argv) > 1):
-            self.CXINavigation.CXITreeTop.buildTree(sys.argv[1])
-            self.CXINavigation.CXITreeBottom.buildTree(sys.argv[1])
-        
+            self.CXINavigation.CXITree.buildTree(sys.argv[1])
+            self.handleNeedDatasetImage("/entry_1/data_1/data")
     def init_menus(self):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
         self.openFile = QtGui.QAction("Open",self)
@@ -113,7 +123,7 @@ class Viewer(QtGui.QMainWindow):
         icon_height = 64
         colormapIcons = paintColormapIcons(icon_width,icon_height)
 
-        self.colormapMenu = QtGui.QMenu("Colormap")
+        self.colormapMenu = QtGui.QMenu("Colormap",self)
         self.colormapActionGroup = QtGui.QActionGroup(self)
 
         traditionalColormaps = ['jet','hot','gray','coolwarm','gnuplot','gist_earth']
@@ -124,7 +134,7 @@ class Viewer(QtGui.QMainWindow):
             a.setCheckable(True)
             self.colormapActions[colormap] = a
 
-        self.exoticColormapMenu = QtGui.QMenu("Exotic")
+        self.exoticColormapMenu = QtGui.QMenu("Exotic",self)
         for colormap in colormapIcons.keys():
             a = self.exoticColormapMenu.addAction(colormapIcons[colormap],colormap)
             a.setActionGroup(self.colormapActionGroup)
@@ -195,8 +205,68 @@ class Viewer(QtGui.QMainWindow):
             self.view.view2D.updateGL()
         else:
             QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
+    def handleNeedDatasetImage(self,datasetName):
+        dataset = self.CXINavigation.CXITree.datasets[datasetName]
+        format = dataset.getCXIFormat()
+        if format == 2:        
+            #self.view.setCurrentWidget(self.view.view2D)
+            self.CXINavigation.datasetBoxes["image"].button.setName(datasetName)
+            self.datasetProp.clear()
+            self.view.view2D.clear()
+            if dataset.isCXIStack():
+                self.view.view2D.loadStack(dataset)
+                self.statusBar.showMessage("Loaded image stack: %s" % dataset.name,1000)
+            else:
+                self.view.view2D.loadImage(dataset)
+                self.statusBar.showMessage("Loaded image: %s" % dataset.name,1000)
+        else:
+            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
+        self.datasetProp.setDataset(dataset)
+        group = datasetName.rsplit("/",1)[0]
+        if self.CXINavigation.datasetBoxes["mask"].button.text().rsplit("/",1)[0] != group:
+            if group+"/mask" in self.CXINavigation.CXITree.datasets.keys():
+                self.handleNeedDatasetMask(group+"/mask")
+            elif group+"/mask_shared" in self.CXINavigation.CXITree.datasets.keys():
+                self.handleNeedDatasetMask(group+"/mask_shared")
+    def handleNeedDatasetMask(self,datasetName):
+        dataset = self.CXINavigation.CXITree.datasets[datasetName]
+        maskOutBits = self.CXINavigation.maskMenu.getMaskOutBits()
+        self.view.view2D.setMask(dataset,maskOutBits)
+        self.view.view2D.clearTextures()
+        self.view.view2D.updateGL()
+        self.CXINavigation.datasetBoxes["mask"].button.setName(datasetName)
+        self.statusBar.showMessage("Loaded mask: %s" % dataset.name,1000)
+    def handleMaskOutBitsChanged(self,action):
+        datasetName = self.CXINavigation.datasetBoxes["mask"].button.text()
+        if datasetName in self.CXINavigation.CXITree.datasets.keys():
+            self.handleNeedDatasetMask(datasetName)
+    def handleNeedDatasetSorting(self,datasetName):
+        pass
+    def handleNeedDatasetPlot(self,datasetName):
+        dataset = self.CXINavigation.CXITree.datasets[datasetName]
+        self.view.view1D.show()
+        self.view.view1D.loadData(dataset)
+        self.CXINavigation.datasetBoxes["plot"].button.setName(datasetName)
+        self.statusBar.showMessage("Loaded plot: %s" % dataset.name,1000)
     def handleDisplayPropChanged(self,prop):
         self.view.view2D.refreshDisplayProp(prop)
+    def handleDatasetClicked(self,datasetName):
+        dataset = self.CXINavigation.CXITree.datasets[datasetName]
+        format = dataset.getCXIFormat()
+        if format == 1:
+            self.handleNeedDatasetPlot(datasetName)
+        elif format == 2:
+            if datasetName[:4] == "mask":
+                self.handleNeedDatasetMask(datasetName)
+            else:
+                self.handleNeedDatasetImage(datasetName)            
+    def handleDatasetChanged(self,dataset,datasetMode):
+        if dataset != None:
+            n = dataset.name
+        else:
+            n = None
+        self.CXINavigation.datasetBoxes[datasetMode].button.setName(n)
+
 
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):
@@ -233,9 +303,6 @@ class PreferencesDialog(QtGui.QDialog):
         f.setFrameStyle(QtGui.QFrame.HLine | (QtGui.QFrame.Sunken)) 
         self.layout().addWidget(f)
         self.layout().addWidget(buttonBox)
-
-
-
 
 
 QtCore.QCoreApplication.setOrganizationName("CXIDB");

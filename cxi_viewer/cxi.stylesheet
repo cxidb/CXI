@@ -1,0 +1,153 @@
+QWidget
+{
+    color: #ffffff;
+    background-color: #323232;
+}
+
+QWidget:disabled
+{
+    color: #404040;
+    background-color: #323232;
+}
+
+QWidget:item:hover
+{
+}
+
+QWidget:item:selected
+{
+    background-color: #ffffff;
+    color: #000000;
+}
+
+QToolTip
+{
+     border: 1px solid black;
+     background-color: #ffffff;
+}
+
+QPushButton
+{
+    border-width: 1px;
+    border-radius: 6;
+    padding: 5px;
+    background-color: #222222;
+}
+
+QPushButton:pressed
+{
+}
+
+
+
+DatasetButton
+{
+    margin: 3px;
+    background-color: #7f7f7f;
+    border-width: 0px;
+    border-radius: 6;
+    border-style: dashed;
+    border-color: white;
+}
+
+DatasetButton:pressed
+{
+    background-color: #222222;
+}
+
+QMenuBar
+{
+
+    background-color: #222222;
+}
+	
+QMenuBar::item
+{
+    background-color: #222222;
+}
+
+QMenuBar::item:selected
+{
+    background-color: #222222;
+    border: 1px solid white;
+    background: white;
+}
+
+QMenu
+{
+    background-color: #222222;
+}
+
+QMenu::item
+{
+    background-color: #222222;
+}
+
+QCheckBox::indicator{
+    color: #b1b1b1;
+    border: 1px solid #7f7f7f;;
+    width: 9px;
+    height: 9px;
+}
+
+QCheckBox::indicator:checked{
+    image:url(./icons/checkbox.png);
+}
+
+QRadioButton::indicator
+{
+    border-radius: 6px;
+}
+
+QRadioButton::indicator:hover, QCheckBox::indicator:hover
+{
+    border: 1px solid white;
+}
+
+QRadioButton::indicator:checked, QRadioButton::indicator:unchecked{
+    color: #b1b1b1;
+    background-color: #323232;
+    border: 1px solid #7f7f7f;;
+    border-radius: 6px;
+}
+QRadioButton::indicator:checked
+{
+    background-color: qradialgradient(
+        cx: 0.5, cy: 0.5,
+        fx: 0.5, fy: 0.5,
+        radius: 1.0,
+        stop: 0.25 #ffffff,
+        stop: 0.3 #323232
+    );
+}
+
+QGroupBox
+{
+    font-weight: bold;
+    border: 1px solid #222222;
+    border-radius: 6px;
+    padding: 7px;
+    margin-top: 1ex;
+}
+
+QGroupBox::title
+{
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 0 3px;
+}
+
+QTreeWidget
+{
+   border: 0px solid #ffffff;
+}
+
+ViewSplitter
+{
+   background-color: black;
+}
+
+ViewSplitter::handle{
+   background-color: #222222
+}
+
