@@ -9,6 +9,7 @@ from matplotlib import cm
 import pyqtgraph
 import cxitree
 import OpenGL.GL.ARB.texture_float
+import sys
 
 class ViewSplitter(QtGui.QSplitter):
     def __init__(self,parent=None):
@@ -297,6 +298,7 @@ class View2D(View,QtOpenGL.QGLWidget):
             uniform float vmin;
             uniform float vmax;
             uniform float gamma;
+            uniform int clamp;
             void main()
             {
                 vec2 uv = gl_TexCoord[0].xy;
@@ -305,6 +307,24 @@ class View2D(View,QtOpenGL.QGLWidget):
                 float offset = vmin;
                 uv[0] = (color.a-offset);
                 uv[1] = 0.0;
+                if(uv[0] < 0.0){
+                  if(clamp == 1){
+                    uv[0] = 0.0;
+                  }else{
+                    color.a = 0.0;
+                    gl_FragColor = color;
+                    return;
+                  }
+                }
+                if(uv[0] > scale){
+                  if(clamp == 1){
+                    uv[0] = scale;
+                  }else{
+                    color.a = 0.0;
+                    gl_FragColor = color;
+                    return;
+                  }
+                }
                 if(norm == 0){
                  // linear
                   uv[0] /= scale;
@@ -321,7 +341,7 @@ class View2D(View,QtOpenGL.QGLWidget):
                  uv[0] = (pow(uv[0]+1.0,gamma)-1.0)/scale;
                 }
                 if(uv[0] >= 1.0){
-                  uv[0] = 0.99;
+                  uv[0] = 0.9999;
                 }
                 if(uv[0] < 0.0){
                   uv[0] = 0.0;
@@ -329,8 +349,8 @@ class View2D(View,QtOpenGL.QGLWidget):
                 color = texture2D(cmap,uv);
                 gl_FragColor = color;
             }
-    ''',GL_FRAGMENT_SHADER),
-    )
+        ''',GL_FRAGMENT_SHADER),
+        )
     def initColormapTextures(self):
         n = 1024
         a = numpy.linspace(0.,1.,n)
@@ -525,6 +545,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         glUniform1f(loc,self.normGamma)
         loc = glGetUniformLocation(self.shader, "norm")
         glUniform1i(loc,self.normScalingValue)
+        loc = glGetUniformLocation(self.shader, "clamp")
+        glUniform1i(loc,self.normClamp)
 
         glColor3f(1.0,1.0,1.0);
         glBegin (GL_QUADS);
@@ -876,6 +898,10 @@ class View2D(View,QtOpenGL.QGLWidget):
             self.normVmin = datasetProp["normVmin"]
             self.normVmax = datasetProp["normVmax"]
             self.normGamma = datasetProp["normGamma"]
+            if(datasetProp["normClamp"] == True):
+                self.normClamp = 1
+            else:
+                self.normClamp = 0
             self.colormapText = datasetProp["colormapText"]
             self.setStackWidth(datasetProp["imageStackSubplotsValue"])
         self.updateGL()

@@ -108,11 +108,13 @@ class DatasetProp(QtGui.QWidget):
         self.displayBox.vbox.addLayout(hbox)
 
 
-        # normClip
+        # normClamp
         hbox = QtGui.QHBoxLayout()
-        hbox.addWidget(QtGui.QLabel("Clip"))
-        self.displayClip = QtGui.QCheckBox("",parent=self)
-        hbox.addWidget(self.displayClip)
+        label = QtGui.QLabel("Clamp")
+        label.setToolTip("If enabled set values outside the min/max range to min/max")
+        hbox.addWidget(label)
+        self.displayClamp = QtGui.QCheckBox("",parent=self)
+        hbox.addWidget(self.displayClamp)
         hbox.addStretch()
         self.displayColormap = QtGui.QPushButton("Colormap",parent=self)
         self.displayColormap.setFixedSize(QtCore.QSize(100,30))
@@ -169,7 +171,7 @@ class DatasetProp(QtGui.QWidget):
         self.imageStackSubplots.valueChanged.connect(self.emitDisplayProp)    
         self.displayMax.editingFinished.connect(self.emitDisplayProp)
         self.displayMin.editingFinished.connect(self.emitDisplayProp)
-        self.displayClip.stateChanged.connect(self.emitDisplayProp)
+        self.displayClamp.stateChanged.connect(self.emitDisplayProp)
         self.displayLin.toggled.connect(self.emitDisplayProp)        
         self.displayLog.toggled.connect(self.emitDisplayProp)
         self.displayPow.toggled.connect(self.emitDisplayProp)
@@ -241,7 +243,7 @@ class DatasetProp(QtGui.QWidget):
         P = self.currDisplayProp
         P["normVmin"] = self.displayMin.value()
         P["normVmax"] = self.displayMax.value()
-        P["normClip"] = self.displayClip.isChecked()
+        P["normClamp"] = self.displayClamp.isChecked()
         if self.displayLin.isChecked():
             P["normScaling"] = "lin"
         elif self.displayLog.isChecked():
@@ -253,7 +255,7 @@ class DatasetProp(QtGui.QWidget):
     def clearNorm(self):
         self.displayMin.setValue(10.)
         self.displayMax.setValue(1000.)
-        self.displayClip.setChecked(True)
+        self.displayClamp.setChecked(True)
         self.displayGamma.setValue(0.25)
         self.displayLog.setChecked(True)
         self.setNorm()

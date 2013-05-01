@@ -34,8 +34,8 @@ class Viewer(QtGui.QMainWindow):
         
         fn = "cxi.stylesheet"
         styleFile=os.path.join(os.path.split(__file__)[0],fn)
-        with open(styleFile,"r") as fh:
-            self.setStyleSheet(fh.read())
+#        with open(styleFile,"r") as fh:
+#            self.setStyleSheet(fh.read())
 
         self.statusBar = self.statusBar()
         self.statusBar.showMessage("Initializing...")
