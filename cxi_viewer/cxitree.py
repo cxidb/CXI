@@ -109,6 +109,22 @@ class MaskMenu(QtGui.QMenu):
                 maskOutBits |= self.PIXELMASK_BITS[key]
         return maskOutBits
 
+class PlotMenu(QtGui.QMenu):
+    def __init__(self,parent=None):
+        QtGui.QMenu.__init__(self,parent)
+        actionGroup = QtGui.QActionGroup(self)
+        actionGroup.setExclusive(True)
+        self.plotActions = {}
+        keys = ["plot","histogram"]
+        for key in keys:
+            self.plotActions[key] = actionGroup.addAction(key)
+            self.addAction(self.plotActions[key])
+            self.plotActions[key].setCheckable(True)
+        self.plotActions["plot"].setChecked(True)
+    def getPlotMode(self):
+        for key in self.plotActions.keys():
+            if self.plotActions[key].isChecked():
+                return key
 
 class CXINavigation(QtGui.QWidget):
     def __init__(self,parent=None):
@@ -132,7 +148,8 @@ class CXINavigation(QtGui.QWidget):
         self.datasetBoxes["sorting"] = DatasetBox("./icons/sort.png","sorting")
         self.vbox.addLayout(self.datasetBoxes["sorting"])
 
-        self.datasetBoxes["plot"] = DatasetBox("./icons/plot.png","plot")
+        self.plotMenu = PlotMenu(self)
+        self.datasetBoxes["plot"] = DatasetBox("./icons/plot.png","plot",self.plotMenu)
         self.vbox.addLayout(self.datasetBoxes["plot"])
 
     def dragEnterEvent(self, e):

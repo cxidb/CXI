@@ -169,8 +169,8 @@ class DatasetProp(QtGui.QWidget):
         self.clear()
         # connect signals
         self.imageStackSubplots.valueChanged.connect(self.emitDisplayProp)    
-        self.displayMax.editingFinished.connect(self.emitDisplayProp)
-        self.displayMin.editingFinished.connect(self.emitDisplayProp)
+        self.displayMax.editingFinished.connect(self.checkLimits)
+        self.displayMin.editingFinished.connect(self.checkLimits)
         self.displayClamp.stateChanged.connect(self.emitDisplayProp)
         self.displayLin.toggled.connect(self.emitDisplayProp)        
         self.displayLog.toggled.connect(self.emitDisplayProp)
@@ -283,7 +283,10 @@ class DatasetProp(QtGui.QWidget):
         self.setNorm()
         self.setColormap()
         self.displayPropChanged.emit(self.currDisplayProp)
-        
+    def checkLimits(self,foovalue=None):
+        self.displayMax.setMinimum(self.displayMin.value())
+        self.displayMin.setMaximum(self.displayMax.value())
+        self.emitDisplayProp()
 
 
 def paintColormapIcons(W,H):
