@@ -28,6 +28,7 @@ QToolTip
 
 QPushButton
 {
+    color: white;
     border-width: 1px;
     border-radius: 6;
     padding: 5px;
@@ -36,21 +37,19 @@ QPushButton
 
 QPushButton:pressed
 {
+    color: white;
     background-color: #222222;
 }
 
-QPushButton:disabled 
+QPushButton:flat 
 {
+    color: white;
     background-color: #222222;
 }
 
-QPushButton:pressed 
+QPushButton:default 
 {
-    background-color: #222222;
-}
-
-QPushButton:focus 
-{
+    color: white;
     background-color: #222222;
 }
 
