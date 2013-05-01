@@ -75,6 +75,7 @@ class Viewer(QtGui.QMainWindow):
         self.CXINavigation.maskMenu.triggered.connect(self.handleMaskOutBitsChanged)
         self.CXINavigation.datasetBoxes["sorting"].button.needDataset.connect(self.handleNeedDatasetSorting)
         self.CXINavigation.datasetBoxes["plot"].button.needDataset.connect(self.handleNeedDatasetPlot)
+        self.CXINavigation.plotMenu.triggered.connect(self.handlePlotModeTriggered)
         self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
         self.view.view2D.imageSelected.connect(self.datasetProp.onImageSelected)
 
@@ -249,10 +250,15 @@ class Viewer(QtGui.QMainWindow):
         pass
     def handleNeedDatasetPlot(self,datasetName):
         dataset = self.CXINavigation.CXITree.datasets[datasetName]
+        plotMode = self.CXINavigation.plotMenu.getPlotMode()
         self.view.view1D.show()
-        self.view.view1D.loadData(dataset)
+        self.view.view1D.loadData(dataset,plotMode)
         self.CXINavigation.datasetBoxes["plot"].button.setName(datasetName)
         self.statusBar.showMessage("Loaded plot: %s" % dataset.name,1000)
+    def handlePlotModeTriggered(self,foovalue=None):
+        datasetName = self.CXINavigation.datasetBoxes["plot"].button.text()
+        if datasetName in self.CXINavigation.CXITree.datasets.keys():
+            self.handleNeedDatasetPlot(datasetName)
     def handleDisplayPropChanged(self,prop):
         self.view.view2D.refreshDisplayProp(prop)
     def handleDatasetClicked(self,datasetName):

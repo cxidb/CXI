@@ -107,15 +107,26 @@ class View1D(View,QtGui.QFrame):
         self.plot.getAxis("bottom").setHeight(space)
         self.plot.getAxis("left").setWidth(space)
         self.plot.getAxis("right").setWidth(space)
-    def loadData(self,dataset):
+    def loadData(self,dataset,plotMode):
         self.setData(dataset)
         data = self.getData(1)
-        self.plot.setLabel("bottom","index")
-        self.plot.setLabel("left",self.data.name)
-        if self.p == None:
-            self.p = self.plot.plot(data, pen=(255,0,0))
-        else:
-            self.p.setData(data)
+        if plotMode == "plot":
+            self.plot.setLabel("bottom","index")
+            self.plot.setLabel("left",self.data.name)
+            if self.p == None:
+                self.p = self.plot.plot(data, pen=(255,0,0))
+            else:
+                self.p.setData(data)
+        elif plotMode == "histogram":
+            (hist,edges) = numpy.histogram(data,bins=200)
+            edges = (edges[:-1]+edges[1:])/2.0
+            self.plot.setLabel("bottom",self.data.name)
+            self.plot.setLabel("left","#")
+            if self.p == None:
+                self.p = self.plot.plot(edges,hist, pen=(255,0,0))
+            else:
+                self.p.setData(edges,hist)
+
 
 class FunctionNorm(colors.Normalize):
     def __init__(self, normFunction, vmin=None, vmax=None, clip=False,offsetMinValue=None):
@@ -304,6 +315,12 @@ class View2D(View,QtOpenGL.QGLWidget):
                 float scale = (vmax-vmin);
                 float offset = vmin;
                 uv[0] = (color.a-offset);
+                if (uv[0] < 0.0){
+                    uv[0] = 0.0;
+                }
+                if (uv[0] > scale){
+                    uv[0] = scale;
+                }
                 uv[1] = 0.0;
                 if(norm == 0){
                  // linear
