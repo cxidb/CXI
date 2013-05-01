@@ -77,10 +77,15 @@ class Viewer(QtGui.QMainWindow):
         self.CXINavigation.datasetBoxes["plot"].button.needDataset.connect(self.handleNeedDatasetPlot)
         self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
         self.view.view2D.imageSelected.connect(self.datasetProp.onImageSelected)
+
+        self.datasetProp.emitDisplayProp()
+
     def after_show(self):
         if(len(sys.argv) > 1):
-            self.CXINavigation.CXITree.buildTree(sys.argv[1])
-            self.handleNeedDatasetImage("/entry_1/data_1/data")
+            self.openCXIFile(sys.argv[1])
+    def openCXIFile(self,filename):
+        self.CXINavigation.CXITree.buildTree(filename)
+        self.handleNeedDatasetImage("/entry_1/data_1/data")
     def init_menus(self):
         self.fileMenu = self.menuBar().addMenu(self.tr("&File"));
         self.openFile = QtGui.QAction("Open",self)
@@ -148,7 +153,7 @@ class Viewer(QtGui.QMainWindow):
     def openFileClicked(self):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
         if(fileName[0]):
-            self.CXINavigation.CXITreeTop.buildTree(fileName[0])
+            self.openCXIFile(fileName[0])
     def assembleGeometryClicked(self):
         self.geometry.assemble_detectors(self.CXINavigation.CXITreeTop.f)
     def viewClicked(self):
