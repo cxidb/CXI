@@ -215,7 +215,7 @@ class DatasetProp(QtGui.QWidget):
     # VIEW
     def onImageSelected(self,selectedImage):
         self.imageStackImageSelected.setText(str(selectedImage))
-        if(selectedImage is not None):
+        if(selectedImage != None):
             self.imageRange.setText("%d to %d" %(numpy.min(self.dataset[selectedImage]),numpy.max(self.dataset[selectedImage])))
             self.imageSum.setText(str(numpy.sum(self.dataset[selectedImage])))
             self.imageBox.show()

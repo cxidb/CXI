@@ -36,9 +36,23 @@ QPushButton
 
 QPushButton:pressed
 {
+    background-color: #222222;
 }
 
+QPushButton:disabled 
+{
+    background-color: #222222;
+}
 
+QPushButton:pressed 
+{
+    background-color: #222222;
+}
+
+QPushButton:focus 
+{
+    background-color: #222222;
+}
 
 DatasetButton
 {
