@@ -1,0 +1,9 @@
+QTreeView
+{
+    background: #333333
+}
+
+QTreeView
+{
+    color: white
+}

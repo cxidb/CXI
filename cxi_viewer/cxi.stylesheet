@@ -158,11 +158,6 @@ QGroupBox::title
     padding: 0 3px;
 }
 
-QTreeWidget
-{
-   border: 0px solid #ffffff;
-}
-
 ViewSplitter
 {
    background-color: black;

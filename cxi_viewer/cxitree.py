@@ -102,6 +102,7 @@ class MaskMenu(QtGui.QMenu):
             self.maskActions[key] = self.addAction(key)
             self.maskActions[key].setCheckable(True)
             self.maskActions[key].setChecked(True)
+        self.maskActions["resolution"].setChecked(False)
     def getMaskOutBits(self):
         maskOutBits=0
         for key in self.maskActions:
@@ -163,13 +164,7 @@ class CXINavigation(QtGui.QWidget):
         self.setText(t)
         self.needDataset.emit(t)
 
-    def keyPressEvent(self,event):
-        print "A"
-        if event.key() == QtCore.Qt.Key_H:
-            if self.isVisible():
-                self.hide()
-            else:
-                self.show()
+    
 
 
 
@@ -229,32 +224,37 @@ class CXITree(QtGui.QTreeWidget):
                     child.setToolTip(self.columnPath-1,string)
                     numDims = dataset.getCXIFormat()
                     S = 70
-                    # text or 0D
-                    if numDims == 0 or dataset.isCXIText():
-                        R = 255-S
-                        G = 255-S
-                        B = 255-S
                     # 1D
-                    elif numDims == 1:
+                    if numDims == 1:
                         R = 255-S
                         G = 255-S
                         B = 255
+                        prop = "1D"
                     # 2D red
                     elif numDims == 2:
                         R = 255-S
                         G = 255
                         B = 255-S 
+                        prop = "2D"
                     # 3D blue
                     elif numDims == 3:
                         R = 255
                         G = 255-S
                         B = 255-S
+                        prop = "3D"
+                    # default grey
+                    else:
+                        R = 255-S
+                        G = 255-S
+                        B = 255-S
+                        prop = "default"
                     # datsets which are not stacks lighter
                     if not dataset.isCXIStack():
                         fade = S
                         R -= fade
                         G -= fade
                         B -= fade
+                        prop += "Stack"
                     child.setForeground(0,QtGui.QBrush(QtGui.QColor(R,G,B)))
                     # make bold if it is a dataset called 'data'
                     if g.rsplit("/",1)[-1] == 'data':

@@ -75,8 +75,9 @@ class Viewer(QtGui.QMainWindow):
         self.view.view2D.imageSelected.connect(self.datasetProp.onImageSelected)
 
         self.datasetProp.emitDisplayProp()
+
+        self.setStyle("default.stylesheet")
         
-        #self.view.view2D.installEventFilter(self)
 
     def after_show(self):
         if(len(sys.argv) > 1):
