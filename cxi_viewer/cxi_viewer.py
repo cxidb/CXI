@@ -146,7 +146,11 @@ class Viewer(QtGui.QMainWindow):
             a.setCheckable(True)
             self.colormapActions[colormap] = a
 
-        self.colormapActions['jet'].setChecked(True)
+        settings = QtCore.QSettings()
+        if(settings.contains("colormap")):
+            self.colormapActions[settings.value('colormap')].setChecked(True)
+        else:
+            self.colormapActions['jet'].setChecked(True)
         self.colormapMenu.addMenu(self.exoticColormapMenu)
         self.viewMenu.addMenu(self.colormapMenu)
 
@@ -175,6 +179,7 @@ class Viewer(QtGui.QMainWindow):
         settings = QtCore.QSettings()
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
+        settings.setValue("colormap", self.datasetProp.currDisplayProp['colormapText'])        
         QtGui.QMainWindow.closeEvent(self,event)
     def preferencesClicked(self):
         diag = PreferencesDialog(self)
