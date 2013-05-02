@@ -803,7 +803,8 @@ class View2D(View,QtOpenGL.QGLWidget):
 
     def mouseReleaseEvent(self, event):
         self.dragging = False
-        if(event.pos() == self.dragStart and event.button() == QtCore.Qt.LeftButton):
+        # Select even when draggin
+        if(event.button() == QtCore.Qt.LeftButton):
             self.selectedImage = self.lastHoveredImage
             self.imageSelected.emit(self.selectedImage)
 # #            self.parent.datasetProp.recalculateSelectedSlice()
