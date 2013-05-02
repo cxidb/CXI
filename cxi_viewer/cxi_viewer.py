@@ -34,9 +34,9 @@ class Viewer(QtGui.QMainWindow):
         
         self.statusBar = self.statusBar()
         self.statusBar.showMessage("Initializing...")
-        self.init_menus()
         self.splitter = QtGui.QSplitter(self)
         self.view = ViewSplitter(self)
+        self.init_menus()
         self.datasetProp = DatasetProp(self)
         self.CXINavigation = CXINavigation(self)
         self.splitter.addWidget(self.CXINavigation)
@@ -107,29 +107,48 @@ class Viewer(QtGui.QMainWindow):
         self.CXIStyleAction.triggered.connect(self.setCXIStyle)
         self.viewMenu.addAction(self.CXIStyleAction)
 
+        self.viewMenu.addSeparator()
+
+        act = QtGui.QAction("Full Screen",self)
+        act.setShortcut(QtGui.QKeySequence("Ctrl+F"))
+        act.setCheckable(True)
+
+        act.triggered.connect(self.toggleFullScreen)
+        self.viewMenu.addAction(act)
+
+        act = QtGui.QAction("Slide Show",self)
+        act.setCheckable(True)
+        act.setShortcut(QtGui.QKeySequence("Ctrl+S"))
+        act.triggered.connect(self.view.view2D.toggleSlideShow)
+        self.viewMenu.addAction(act)
+
+        self.viewMenu.addSeparator()
+
         self.viewActions = {"File Tree" : QtGui.QAction("File Tree",self),
                             "View 1D" : QtGui.QAction("View 1D",self),
                             "View 2D" : QtGui.QAction("View 2D",self),
-                            "Display Properties" : QtGui.QAction("Display Properties",self),
-                            "Full Screen": QtGui.QAction("Full Screen",self)}
+                            "Display Properties" : QtGui.QAction("Display Properties",self)}
 
-        viewNames = ["Full Screen", "File Tree", "Display Properties","View 1D","View 2D"]
+        viewShortcuts = {"File Tree" : "Ctrl+T",
+                         "View 1D" : "Ctrl+1",
+                         "View 2D" : "Ctrl+2",
+                         "Display Properties" : "Ctrl+D"}
+
+        viewNames = ["File Tree", "Display Properties","View 1D","View 2D"]
       
+        actions = {}
         for viewName in viewNames:
-            act = self.viewActions[viewName]
-            act.setCheckable(True)
-            self.viewMenu.addAction(act)
-            act.triggered.connect(self.viewClicked)
-            if viewName == "Full Screen": 
-                self.viewMenu.addSeparator()
-            if viewName == "Full Screen":
-                act.setShortcut(QtGui.QKeySequence("Ctrl+F"))
-            if viewName == "Full Screen" or viewName == "View 1D":
-                act.setChecked(False)
+            actions[viewName] = self.viewActions[viewName]
+            actions[viewName].setCheckable(True)
+            actions[viewName].setShortcut(QtGui.QKeySequence(viewShortcuts[viewName]))
+            actions[viewName].triggered.connect(self.viewClicked)
+            if viewName in ["View 1D"]:
+                actions[viewName].setChecked(False)
             else:
-                act.setChecked(True)
+                actions[viewName].setChecked(True)
+            self.viewMenu.addAction(actions[viewName])
+        
         self.viewMenu.addSeparator()
-
 
         icon_width = 64
         icon_height = 64
@@ -180,9 +199,6 @@ class Viewer(QtGui.QMainWindow):
     def viewClicked(self):
         viewName = self.sender().text()
         checked = self.viewActions[viewName].isChecked()
-        if viewName == "Full Screen":
-            self.toggleFullScreen()
-            return
         viewBoxes = {"File Tree" : self.CXINavigation,
                      "Display Properties" : self.datasetProp,
                      "View 1D" : self.view.view1D,
