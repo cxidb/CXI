@@ -26,7 +26,6 @@ class ViewSplitter(QtGui.QSplitter):
 
         self.setSizes([1000,1000])
 
-
 class View(QtCore.QObject):
     needDataset = QtCore.Signal(str)
     datasetChanged = QtCore.Signal(h5py.Dataset,str)
@@ -188,6 +187,10 @@ class ImageLoader(QtCore.QObject):
         mask = self.view.getMask(2,img)
         self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
         self.imageData[img] = data
+        #X,Y = numpy.meshgrid(numpy.arange(self.imageData[img].shape[1]),numpy.arange(self.imageData[img].shape[0]))
+        #self.imageData[img][:,:] = numpy.floor(X[:,:]/10.)
+        #for i in range(self.imageData[img].shape[1]):
+        #    print self.imageData[img][0,i]
         self.maskData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.uint32)
         self.maskData[img] = mask
         self.imageLoaded.emit(img)
@@ -222,7 +225,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.viewer = viewer
         self.translation = [0,0]
         self.zoom = 4.0
-        self.setFocusPolicy(QtCore.Qt.ClickFocus)
+        #self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.data = {}
         self.texturesLoading = {}
         self.textureIds = {}
@@ -357,12 +360,6 @@ class View2D(View,QtOpenGL.QGLWidget):
                  scale = pow(scale+1.0,gamma)-1.0;
                  uv[0] = (pow(uv[0]+1.0,gamma)-1.0)/scale;
                 }
-                if(uv[0] >= 1.0){
-                  uv[0] = 0.9999;
-                }
-                if(uv[0] < 0.0){
-                  uv[0] = 0.0;
-                }
                 color = texture2D(cmap,uv);
                 gl_FragColor = color;
             }
@@ -391,6 +388,8 @@ class View2D(View,QtOpenGL.QGLWidget):
             glBindTexture(GL_TEXTURE_2D, self.colormapTextures[m])
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, n,1, 0, GL_RGBA, GL_UNSIGNED_BYTE, a_rgb);
 
@@ -742,6 +741,12 @@ class View2D(View,QtOpenGL.QGLWidget):
         #     self.scaleZoom(0.95)
         elif(event.key() == QtCore.Qt.Key_F):
             self.parent.statusBar.showMessage("Flaged "+str(self.hoveredImage()),1000)
+        #elif event.key() == QtCore.Qt.Key_Space:
+        #    if self.viewer.windowState() & QtCore.Qt.WindowFullScreen:
+        #        self.viewer.showNormal()
+        #    else:
+        #        self.viewer.showFullScreen()
+
 
     def mouseReleaseEvent(self, event):
         self.dragging = False
@@ -922,7 +927,6 @@ class View2D(View,QtOpenGL.QGLWidget):
             self.colormapText = datasetProp["colormapText"]
             self.setStackWidth(datasetProp["imageStackSubplotsValue"])
         self.updateGL()
-        
 
 # Temporary code to fix a bug in PyOpenGL which validates shaders too early
 

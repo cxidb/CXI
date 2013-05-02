@@ -25,6 +25,8 @@ class DatasetProp(QtGui.QWidget):
     displayPropChanged = QtCore.Signal(dict)
     def __init__(self,parent=None):
         QtGui.QWidget.__init__(self,parent)
+        self.setFocusPolicy(QtCore.Qt.ClickFocus)
+
         self.viewer = parent
         # this dict holds all current settings
         self.currDisplayProp = {}
@@ -287,6 +289,12 @@ class DatasetProp(QtGui.QWidget):
         self.displayMax.setMinimum(self.displayMin.value())
         self.displayMin.setMaximum(self.displayMax.value())
         self.emitDisplayProp()
+    def keyPressEvent(self,event):
+        if event.key() == QtCore.Qt.Key_H:
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show()
 
 
 def paintColormapIcons(W,H):

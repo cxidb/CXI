@@ -26,33 +26,6 @@ QToolTip
      background-color: #ffffff;
 }
 
-QPushButton
-{
-    color: white;
-    border-width: 1px;
-    border-radius: 6;
-    padding: 5px;
-    background-color: #222222;
-}
-
-QPushButton:pressed
-{
-    color: white;
-    background-color: #222222;
-}
-
-QPushButton:flat 
-{
-    color: white;
-    background-color: #222222;
-}
-
-QPushButton:default 
-{
-    color: white;
-    background-color: #222222;
-}
-
 DatasetButton
 {
     margin: 3px;
@@ -61,6 +34,40 @@ DatasetButton
     border-radius: 6;
     border-style: dashed;
     border-color: white;
+}
+
+QPushButton
+{
+    color: white;
+    border-width: 1px;
+    border-radius: 6;
+    border-color: black;
+    padding: 5px;
+    background-color: #222222;
+}
+
+QPushButton:pressed
+{
+    color: white;
+    border-width: 1px;
+    border-color: black;
+    background-color: #222222;
+}
+
+QPushButton:flat 
+{
+    color: white;
+    border-width: 1px;
+    border-color: black;
+    background-color: #222222;
+}
+
+QPushButton:default 
+{
+    color: white;
+    border-width: 1px;
+    border-color: black;
+    background-color: #222222;
 }
 
 DatasetButton:pressed
@@ -123,6 +130,7 @@ QRadioButton::indicator:checked, QRadioButton::indicator:unchecked{
     border: 1px solid #7f7f7f;;
     border-radius: 6px;
 }
+
 QRadioButton::indicator:checked
 {
     background-color: qradialgradient(
@@ -160,7 +168,8 @@ ViewSplitter
    background-color: black;
 }
 
-ViewSplitter::handle{
+ViewSplitter::handle
+{
    background-color: #222222
 }
 

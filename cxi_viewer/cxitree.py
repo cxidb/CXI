@@ -163,6 +163,14 @@ class CXINavigation(QtGui.QWidget):
         self.setText(t)
         self.needDataset.emit(t)
 
+    def keyPressEvent(self,event):
+        print "A"
+        if event.key() == QtCore.Qt.Key_H:
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show()
+
 
 
 class CXITree(QtGui.QTreeWidget):

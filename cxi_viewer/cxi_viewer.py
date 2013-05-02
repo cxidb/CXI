@@ -32,11 +32,6 @@ class Viewer(QtGui.QMainWindow):
     def __init__(self):
         QtGui.QMainWindow.__init__(self)
         
-        fn = "cxi.stylesheet"
-        styleFile=os.path.join(os.path.split(__file__)[0],fn)
-#        with open(styleFile,"r") as fh:
-#            self.setStyleSheet(fh.read())
-
         self.statusBar = self.statusBar()
         self.statusBar.showMessage("Initializing...")
         self.init_menus()
@@ -80,6 +75,8 @@ class Viewer(QtGui.QMainWindow):
         self.view.view2D.imageSelected.connect(self.datasetProp.onImageSelected)
 
         self.datasetProp.emitDisplayProp()
+        
+        #self.view.view2D.installEventFilter(self)
 
     def after_show(self):
         if(len(sys.argv) > 1):
@@ -103,26 +100,34 @@ class Viewer(QtGui.QMainWindow):
         
         self.viewMenu = self.menuBar().addMenu(self.tr("&View"));
 
-        self.viewActions = {"File Trees" : QtGui.QAction("File Trees",self),
-                            "Dataset Properties" : QtGui.QAction("Dataset Properties",self),
-                            "General Properties" : QtGui.QAction("General Properties",self),
-                            "Display Properties" : QtGui.QAction("Display Properties",self),
-                            "Mask Out Pixels" : QtGui.QAction("Mask Out Pixels",self)}
+        self.CXIStyleAction = QtGui.QAction("CXI Style",self)
+        self.CXIStyleAction.setCheckable(True)
+        self.CXIStyleAction.setChecked(False)
+        self.CXIStyleAction.triggered.connect(self.setCXIStyle)
+        self.viewMenu.addAction(self.CXIStyleAction)
 
-        viewNames = ["File Trees",
-                     "Dataset Properties",
-                     "General Properties",
-                     "Display Properties",
-                     "Mask Out Pixels"]
-        
+        self.viewActions = {"File Tree" : QtGui.QAction("File Tree",self),
+                            "View 1D" : QtGui.QAction("View 1D",self),
+                            "View 2D" : QtGui.QAction("View 2D",self),
+                            "Display Properties" : QtGui.QAction("Display Properties",self),
+                            "Full Screen": QtGui.QAction("Full Screen",self)}
+
+        viewNames = ["Full Screen", "File Tree", "Display Properties","View 1D","View 2D"]
+      
         for viewName in viewNames:
             act = self.viewActions[viewName]
             act.setCheckable(True)
-            act.setChecked(True)
             self.viewMenu.addAction(act)
             act.triggered.connect(self.viewClicked)
-            if viewName == "Dataset Properties": 
+            if viewName == "Full Screen": 
                 self.viewMenu.addSeparator()
+            if viewName == "Full Screen":
+                act.setShortcut(QtGui.QKeySequence("Ctrl+F"))
+            if viewName == "Full Screen" or viewName == "View 1D":
+                act.setChecked(False)
+            else:
+                act.setChecked(True)
+        self.viewMenu.addSeparator()
 
 
         icon_width = 64
@@ -155,23 +160,43 @@ class Viewer(QtGui.QMainWindow):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
         if(fileName[0]):
             self.openCXIFile(fileName[0])
+    def setStyle(self,fn=""):
+        if fn != "": 
+            styleFile=os.path.join(os.path.split(__file__)[0],fn)
+            with open(styleFile,"r") as fh:
+                self.setStyleSheet(fh.read())
+        else:
+            self.setStyleSheet("")
+            
     def assembleGeometryClicked(self):
         self.geometry.assemble_detectors(self.CXINavigation.CXITreeTop.f)
     def viewClicked(self):
-        viewBoxes = {"File Trees" : self.CXINavigation,
-                     "Dataset Properties" : self.datasetProp,
-                     "General Properties" : self.datasetProp.generalBox,
-                     "Display Properties" : self.datasetProp.displayBox,
-                     "Mask Out Pixels" : self.datasetProp.maskBox}
         viewName = self.sender().text()
-        box = viewBoxes[viewName]
         checked = self.viewActions[viewName].isChecked()
+        if viewName == "Full Screen":
+            self.toggleFullScreen()
+            return
+        viewBoxes = {"File Tree" : self.CXINavigation,
+                     "Display Properties" : self.datasetProp,
+                     "View 1D" : self.view.view1D,
+                     "View 2D" : self.view.view2D}
+        box = viewBoxes[viewName]
         if(checked):
             self.statusBar.showMessage("Showing %s" % viewName,1000)
             box.show()
         else:
             self.statusBar.showMessage("Hiding %s" % viewName,1000)
             box.hide()
+    def setCXIStyle(self):
+        if self.CXIStyleAction.isChecked():
+            self.setStyle("cxi.stylesheet")
+        else:
+            self.setStyle("")
+    def toggleFullScreen(self):
+        if self.windowState() & QtCore.Qt.WindowFullScreen:
+            self.showNormal()
+        else:
+            self.showFullScreen()
     def closeEvent(self,event):
         settings = QtCore.QSettings()
         settings.setValue("geometry", self.saveGeometry())
@@ -255,6 +280,7 @@ class Viewer(QtGui.QMainWindow):
         self.view.view1D.loadData(dataset,plotMode)
         self.CXINavigation.datasetBoxes["plot"].button.setName(datasetName)
         self.statusBar.showMessage("Loaded plot: %s" % dataset.name,1000)
+        self.viewActions["View 1D"].setChecked(True)
     def handlePlotModeTriggered(self,foovalue=None):
         datasetName = self.CXINavigation.datasetBoxes["plot"].button.text()
         if datasetName in self.CXINavigation.CXITree.datasets.keys():
@@ -277,7 +303,6 @@ class Viewer(QtGui.QMainWindow):
         else:
             n = None
         self.CXINavigation.datasetBoxes[datasetMode].button.setName(n)
-
 
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):
