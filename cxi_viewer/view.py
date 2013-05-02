@@ -10,6 +10,7 @@ import pyqtgraph
 import cxitree
 import OpenGL.GL.ARB.texture_float
 import sys
+import time
 
 class ViewSplitter(QtGui.QSplitter):
     def __init__(self,parent=None):
@@ -52,7 +53,7 @@ class View(QtCore.QObject):
             return numpy.array(self.data).flatten()
         elif nDims == 2:
             if self.data.isCXIStack():
-                return numpy.array(self.data[img_sorted,:,:])
+                return self.data[img_sorted,:,:]
             else:
                 return numpy.array(self.data[:,:])
     # MASK
@@ -150,10 +151,10 @@ class ImageLoader(QtCore.QObject):
         data = self.view.getData(2,img)
         mask = self.view.getMask(2,img)
         self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
-        self.imageData[img] = data
+        self.imageData[img] = data[:]
         if(mask != None):
             self.maskData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
-            self.maskData[img] = mask
+            self.maskData[img] = mask[:]
         else:
             self.maskData[img] = None
         self.imageLoaded.emit(img)
@@ -221,7 +222,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.loadingImageAnimationTimer.start(100)
 
         self.setAcceptDrops(True)
-
+#        self.time1 = time.time()
     def stopThreads(self):
         while(self.imageLoader.isRunning()):
             self.imageLoader.quit()
@@ -304,30 +305,26 @@ class View2D(View,QtOpenGL.QGLWidget):
                 // loop through the first 16 bits
                 float bit = 1.0;
                 if(maskBits > 0.0){
-                for(int i = 0;i<16;i++){
-                    if(floor(mod(maskBits/bit,2.0)) == 1.0 && floor(mod(maskedBits/bit,2.0)) == 1.0){
-                        color.a = 0.0;
-                        gl_FragColor = color;
-                        return;
+                    for(int i = 0;i<16;i++){
+                        if(floor(mod(maskBits/bit,2.0)) == 1.0 && floor(mod(maskedBits/bit,2.0)) == 1.0){
+                            color.a = 0.0;
+                            gl_FragColor = color;
+                            return;
+                        }
+                        bit = bit*2.0;
                     }
-                    bit = bit*2.0;
-                }
                 }
 
-                // Apply Colormap
+                
                 uv[0] = (color.a-offset);
-                if (uv[0] < 0.0){
-                    uv[0] = 0.0;
-                }
-                if (uv[0] > scale){
-                    uv[0] = scale;
-                }
 
                 // Check for clamping 
                 uv[1] = 0.0;
                 if(uv[0] < 0.0){
                   if(clamp == 1){
                     uv[0] = 0.0;
+                    gl_FragColor = texture2D(cmap,uv);
+                    return;
                   }else{
                     color.a = 0.0;
                     gl_FragColor = color;
@@ -336,13 +333,16 @@ class View2D(View,QtOpenGL.QGLWidget):
                 }
                 if(uv[0] > scale){
                   if(clamp == 1){
-                    uv[0] = scale;
+                    uv[0] = 1.0;
+                    gl_FragColor = texture2D(cmap,uv);
+                    return;
                   }else{
                     color.a = 0.0;
                     gl_FragColor = color;
                     return;
                   }
                 }
+                // Apply Colormap
                 if(norm == 0){
                  // linear
                   uv[0] /= scale;
@@ -603,6 +603,9 @@ class View2D(View,QtOpenGL.QGLWidget):
         '''
         Drawing routine
         '''
+#        self.time2 = time.time()
+#        time3 = time.time()
+#        print '%s function took %0.3f ms' % ("Non paintGL", (self.time2-self.time1)*1000.0)
         if(not self.isValid() or not self.isVisible()):
             return
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -621,11 +624,14 @@ class View2D(View,QtOpenGL.QGLWidget):
                 img_height = self.data.getCXIHeight()
                 visible = self.visibleImages()
                 self.updateTextures(visible)
-                for i,img in enumerate(self.imageTextures):
+                for i,img in enumerate(set.intersection(set(self.imageTextures),set(visible))):
                     self.paintImage(img)
                 for img in (set(visible) - set(self.imageTextures)):
                     self.paintLoadingImage(img)
-        glFlush()
+#        glFlush()
+#        time4 = time.time()
+#        print '%s function took %0.3f ms' % ("paintGL", (time4-time3)*1000.0)
+#        self.time1 = time.time()
     def addToStack(self,data):
         pass
     def loadStack(self,data):
