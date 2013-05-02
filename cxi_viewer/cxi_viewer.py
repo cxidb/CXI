@@ -76,7 +76,7 @@ class Viewer(QtGui.QMainWindow):
 
         self.datasetProp.emitDisplayProp()
 
-        self.setStyle("default.stylesheet")
+        self.setStyle()
         
 
     def after_show(self):
@@ -165,14 +165,16 @@ class Viewer(QtGui.QMainWindow):
         fileName = QtGui.QFileDialog.getOpenFileName(self,"Open CXI File", None, "CXI Files (*.cxi)");
         if(fileName[0]):
             self.openCXIFile(fileName[0])
-    def setStyle(self,fn=""):
-        if fn != "": 
-            styleFile=os.path.join(os.path.split(__file__)[0],fn)
-            with open(styleFile,"r") as fh:
-                self.setStyleSheet(fh.read())
+    def setStyle(self,fn="default.stylesheet"):
+        styleFile=os.path.join(os.path.split(__file__)[0],fn)
+        with open(styleFile,"r") as fh:
+            self.setStyleSheet(fh.read())
+    def setCXIStyle(self):
+        if self.CXIStyleAction.isChecked():
+            self.setStyle("dark.stylesheet")
         else:
-            self.setStyleSheet("")
-            
+            self.setStyle()
+            #self.setStyle("")
     def assembleGeometryClicked(self):
         self.geometry.assemble_detectors(self.CXINavigation.CXITreeTop.f)
     def viewClicked(self):
@@ -192,11 +194,6 @@ class Viewer(QtGui.QMainWindow):
         else:
             self.statusBar.showMessage("Hiding %s" % viewName,1000)
             box.hide()
-    def setCXIStyle(self):
-        if self.CXIStyleAction.isChecked():
-            self.setStyle("cxi.stylesheet")
-        else:
-            self.setStyle("")
     def toggleFullScreen(self):
         if self.windowState() & QtCore.Qt.WindowFullScreen:
             self.showNormal()
