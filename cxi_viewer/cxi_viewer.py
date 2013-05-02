@@ -268,9 +268,7 @@ class Viewer(QtGui.QMainWindow):
         self.CXINavigation.datasetBoxes["mask"].button.setName(datasetName)
         self.statusBar.showMessage("Loaded mask: %s" % dataset.name,1000)
     def handleMaskOutBitsChanged(self,action):
-        datasetName = self.CXINavigation.datasetBoxes["mask"].button.text()
-        if datasetName in self.CXINavigation.CXITree.datasets.keys():
-            self.handleNeedDatasetMask(datasetName)
+        self.view.view2D.setMaskOutBits(self.CXINavigation.maskMenu.getMaskOutBits())
     def handleNeedDatasetSorting(self,datasetName):
         pass
     def handleNeedDatasetPlot(self,datasetName):

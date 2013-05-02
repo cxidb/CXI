@@ -59,6 +59,8 @@ class View(QtCore.QObject):
         self.mask = maskDataset
         self.maskOutBits = maskOutBits
         self.datasetChanged.emit(maskDataset,"mask")
+    def setMaskOutBits(self,maskOutBits=0):
+        self.maskOutBits = maskOutBits
     def getMask(self,nDims=2,img_sorted=0):
         if self.mask == None:
             return None
@@ -67,7 +69,9 @@ class View(QtCore.QObject):
                 mask = self.mask[img_sorted,:,:]
             else:
                 mask = self.mask[:,:]
-            return ((mask & self.maskOutBits) == 0)
+            # do not apply maskBits, we'll do it in shader
+#            return ((mask & self.maskOutBits) == 0)
+            return mask
     # SORTING
     def setSortingIndices(self, dataset=None):
         if dataset != None:
@@ -191,8 +195,11 @@ class ImageLoader(QtCore.QObject):
         #self.imageData[img][:,:] = numpy.floor(X[:,:]/10.)
         #for i in range(self.imageData[img].shape[1]):
         #    print self.imageData[img][0,i]
-        self.maskData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.uint32)
-        self.maskData[img] = mask
+        if(mask != None):
+            self.maskData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
+            self.maskData[img] = mask
+        else:
+            self.maskData[img] = None
         self.imageLoaded.emit(img)
     def clear(self):
         self.loaded = {}
@@ -221,15 +228,17 @@ class View2D(View,QtOpenGL.QGLWidget):
     imageSelected = QtCore.Signal(int) 
     def __init__(self,viewer,parent=None):
         View.__init__(self,parent,"image")
-        QtOpenGL.QGLWidget.__init__(self,parent)
+        format =  QtOpenGL.QGLFormat();
+        format.setVersion(1,1);
+        QtOpenGL.QGLWidget.__init__(self,format,parent)
         self.viewer = viewer
         self.translation = [0,0]
         self.zoom = 4.0
         #self.setFocusPolicy(QtCore.Qt.ClickFocus)
         self.data = {}
         self.texturesLoading = {}
-        self.textureIds = {}
-#        self.textureImages = {}
+        self.imageTextures = {}
+        self.maskTextures = {}
         self.texture = {}
         self.parent = parent
         self.setMouseTracking(True)
@@ -288,6 +297,15 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.circle_texture = self.bindTexture(self.circle_image,GL_TEXTURE_2D,GL_RGBA,QtOpenGL.QGLContext.LinearFilteringBindOption)
         self.initShaders()
         self.initColormapTextures()
+        
+        texture = glGenTextures(1)
+        glBindTexture(GL_TEXTURE_2D, texture)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+        defaultMaskData = numpy.zeros((1,1),dtype=numpy.float32)
+        glTexImage2D(GL_TEXTURE_2D, 0, OpenGL.GL.ARB.texture_float.GL_ALPHA32F_ARB, 1, 1, 0, GL_ALPHA, GL_FLOAT, defaultMaskData);
+        self.defaultMaskTexture = texture
     def initShaders(self):
         if not glUseProgram:
             print 'Missing Shader Objects!'
@@ -313,12 +331,34 @@ class View2D(View,QtOpenGL.QGLWidget):
             uniform float vmax;
             uniform float gamma;
             uniform int clamp;
+            uniform sampler2D mask;
+            uniform float maskedBits;
             void main()
             {
                 vec2 uv = gl_TexCoord[0].xy;
                 vec4 color = texture2D(data, uv);
+                vec4 mcolor = texture2D(mask, uv);
                 float scale = (vmax-vmin);
                 float offset = vmin;
+
+                // Apply Mask
+
+                // Using a float for the mask will only work up to about 24 bits
+                float maskBits = mcolor.a;
+                // loop through the first 16 bits
+                float bit = 1.0;
+                if(maskBits > 0.0){
+                for(int i = 0;i<16;i++){
+                    if(floor(mod(maskBits/bit,2.0)) == 1.0 && floor(mod(maskedBits/bit,2.0)) == 1.0){
+                        color.a = 0.0;
+                        gl_FragColor = color;
+                        return;
+                    }
+                    bit = bit*2.0;
+                }
+                }
+
+                // Apply Colormap
                 uv[0] = (color.a-offset);
                 if (uv[0] < 0.0){
                     uv[0] = 0.0;
@@ -326,6 +366,8 @@ class View2D(View,QtOpenGL.QGLWidget):
                 if (uv[0] > scale){
                     uv[0] = scale;
                 }
+
+                // Check for clamping 
                 uv[1] = 0.0;
                 if(uv[0] < 0.0){
                   if(clamp == 1){
@@ -350,13 +392,10 @@ class View2D(View,QtOpenGL.QGLWidget):
                   uv[0] /= scale;
                 }else if(norm == 1){
                  // log
-//                 uv[0] = (uv[0] + 1.0 * exp(1.0))/scale;
-//                 uv[0] = log(uv[0]);
                  scale = log(scale+1.0);
                  uv[0] = log(uv[0]+1.0)/scale;
                 }else if(norm == 2){
                   // power
-//                  uv[0] = pow((uv[0] + scale)/scale,gamma)-1.0;
                  scale = pow(scale+1.0,gamma)-1.0;
                  uv[0] = (pow(uv[0]+1.0,gamma)-1.0)/scale;
                 }
@@ -546,12 +585,21 @@ class View2D(View,QtOpenGL.QGLWidget):
         glActiveTexture(GL_TEXTURE0+1)
         data_texture_loc = glGetUniformLocation(self.shader, "data")
         glUniform1i(data_texture_loc,1)
-        glBindTexture (GL_TEXTURE_2D, self.textureIds[img]);
+        glBindTexture (GL_TEXTURE_2D, self.imageTextures[img]);
 
         glActiveTexture(GL_TEXTURE0+2)
         cmap_texture_loc = glGetUniformLocation(self.shader, "cmap")
         glUniform1i(cmap_texture_loc,2)
         glBindTexture (GL_TEXTURE_2D, self.colormapTextures[self.colormapText]);
+
+        glActiveTexture(GL_TEXTURE0+3)
+        loc = glGetUniformLocation(self.shader, "mask")
+        glUniform1i(loc,3)
+        if(img in self.maskTextures.keys()):
+            glBindTexture (GL_TEXTURE_2D, self.maskTextures[img]);
+        else:
+            # If not mask is available load the default mask
+            glBindTexture (GL_TEXTURE_2D, self.defaultMaskTexture);
 
         loc = glGetUniformLocation(self.shader, "vmin")
         glUniform1f(loc,self.normVmin)
@@ -563,6 +611,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         glUniform1i(loc,self.normScalingValue)
         loc = glGetUniformLocation(self.shader, "clamp")
         glUniform1i(loc,self.normClamp)
+        loc = glGetUniformLocation(self.shader, "maskedBits")
+        glUniform1f(loc,self.maskOutBits)
 
         glColor3f(1.0,1.0,1.0);
         glBegin (GL_QUADS);
@@ -615,9 +665,9 @@ class View2D(View,QtOpenGL.QGLWidget):
                 img_height = self.data.getCXIHeight()
                 visible = self.visibleImages()
                 self.updateTextures(visible)
-                for i,img in enumerate(self.textureIds):
+                for i,img in enumerate(self.imageTextures):
                     self.paintImage(img)
-                for img in (set(visible) - set(self.textureIds)):
+                for img in (set(visible) - set(self.imageTextures)):
                     self.paintLoadingImage(img)
         glFlush()
     def addToStack(self,data):
@@ -658,18 +708,30 @@ class View2D(View,QtOpenGL.QGLWidget):
         return visible
     @QtCore.Slot(int)
     def generateTexture(self,img):
-        imageData = self.loaderThread.imageData[img][:]
+        imageData = self.loaderThread.imageData[img]
+        maskData = self.loaderThread.maskData[img]
         texture = glGenTextures(1)
         glBindTexture(GL_TEXTURE_2D, texture)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+        glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
         glTexImage2D(GL_TEXTURE_2D, 0, OpenGL.GL.ARB.texture_float.GL_ALPHA32F_ARB, imageData.shape[1], imageData.shape[0], 0, GL_ALPHA, GL_FLOAT, imageData);
-        self.textureIds[img] = texture
+        self.imageTextures[img] = texture
+
+        if(maskData is not None):
+            texture = glGenTextures(1)
+            glBindTexture(GL_TEXTURE_2D, texture)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+            glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
+            glTexImage2D(GL_TEXTURE_2D, 0, OpenGL.GL.ARB.texture_float.GL_ALPHA32F_ARB, imageData.shape[1], imageData.shape[0], 0, GL_ALPHA, GL_FLOAT, maskData);
+            self.maskTextures[img] = texture
         self.updateGL()
     def updateTextures(self,images):
         for img in images:
-            if(img not in self.textureIds):
+            if(img not in self.imageTextures):
                 self.needsImage.emit(img)
     def wheelEvent(self, event):    
         settings = QtCore.QSettings()    
@@ -750,7 +812,8 @@ class View2D(View,QtOpenGL.QGLWidget):
 
     def mouseReleaseEvent(self, event):
         self.dragging = False
-        if(event.pos() == self.dragStart and event.button() == QtCore.Qt.LeftButton):
+        # Select even when draggin
+        if(event.button() == QtCore.Qt.LeftButton):
             self.selectedImage = self.lastHoveredImage
             self.imageSelected.emit(self.selectedImage)
 # #            self.parent.datasetProp.recalculateSelectedSlice()
@@ -887,8 +950,10 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.clearTextures()
         self.updateGL()
     def clearTextures(self):
-        glDeleteTextures(self.textureIds.values())
-        self.textureIds = {}
+        glDeleteTextures(self.imageTextures.values())
+        glDeleteTextures(self.maskTextures.values())
+        self.imageTextures = {}
+        self.maskTextures = {}
         self.clearLoaderThread.emit(0)
     def setStackWidth(self,width):  
         ratio = float(self.stackWidth)/width 
