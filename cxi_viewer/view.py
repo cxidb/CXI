@@ -337,6 +337,9 @@ class View2D(View,QtOpenGL.QGLWidget):
                 vec4 mcolor = texture2D(mask, uv);
                 float scale = (vmax-vmin);
                 float offset = vmin;
+
+                // Apply Mask
+
                 // Using a float for the mask will only work up to about 24 bits
                 float maskBits = mcolor.a;
                 // loop through the first 16 bits
@@ -351,11 +354,8 @@ class View2D(View,QtOpenGL.QGLWidget):
                     bit = bit*2.0;
                 }
                 }
-                if(floor(mod(maskBits/128.0,2.0)) == 1.0 && floor(mod(maskedBits/128.0,2.0)) == 1.0){
-                  color.a = 0.0;
-                  gl_FragColor = color;
-                  return;
-                }
+
+                // Apply Colormap
                 uv[0] = (color.a-offset);
                 if (uv[0] < 0.0){
                     uv[0] = 0.0;
@@ -363,6 +363,8 @@ class View2D(View,QtOpenGL.QGLWidget):
                 if (uv[0] > scale){
                     uv[0] = scale;
                 }
+
+                // Check for clamping 
                 uv[1] = 0.0;
                 if(uv[0] < 0.0){
                   if(clamp == 1){
@@ -387,21 +389,12 @@ class View2D(View,QtOpenGL.QGLWidget):
                   uv[0] /= scale;
                 }else if(norm == 1){
                  // log
-//                 uv[0] = (uv[0] + 1.0 * exp(1.0))/scale;
-//                 uv[0] = log(uv[0]);
                  scale = log(scale+1.0);
                  uv[0] = log(uv[0]+1.0)/scale;
                 }else if(norm == 2){
                   // power
-//                  uv[0] = pow((uv[0] + scale)/scale,gamma)-1.0;
                  scale = pow(scale+1.0,gamma)-1.0;
                  uv[0] = (pow(uv[0]+1.0,gamma)-1.0)/scale;
-                }
-                if(uv[0] >= 1.0){
-                  uv[0] = 0.9999;
-                }
-                if(uv[0] < 0.0){
-                  uv[0] = 0.0;
                 }
                 color = texture2D(cmap,uv);
                 gl_FragColor = color;
@@ -431,6 +424,8 @@ class View2D(View,QtOpenGL.QGLWidget):
             glBindTexture(GL_TEXTURE_2D, self.colormapTextures[m])
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
             glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE)
+            glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE)
             glPixelStorei(GL_UNPACK_ALIGNMENT, 1)
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, n,1, 0, GL_RGBA, GL_UNSIGNED_BYTE, a_rgb);
 
