@@ -133,47 +133,6 @@ class View1D(View,QtGui.QFrame):
                 self.p.setData(edges,hist)
 
 
-class FunctionNorm(colors.Normalize):
-    def __init__(self, normFunction, vmin=None, vmax=None, clip=False,offsetMinValue=None):
-        colors.Normalize.__init__(self,vmin,vmax,clip)
-        self.function = normFunction
-        self.clip = clip
-        self.offsetMinValue = offsetMinValue
-    def __call__(self,value,clip=None):
-        clip = self.clip
-        value_clipped = numpy.array(value,dtype="float")
-        if self.offsetMinValue != None:
-            offset = value_clipped[numpy.isfinite(value_clipped)].min() - self.offsetMinValue
-        else:
-            offset = 0
-        value_clipped -= offset
-        vmin = self.vmin - offset
-        vmax = self.vmax - offset
-        fvmin = self.function(vmin)
-        fvmax = self.function(vmax)
-        mask = numpy.isfinite(value_clipped) == False
-        # check validity of given vmin and vmax
-        if vmin > vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
-            return numpy.ma.array(numpy.zeros_like(value),mask=numpy.ones_like(value),fill_value=1e+20)
-        # clipping / masking for values out of range
-        above = value_clipped > vmax
-        if above.sum() > 0:
-            if clip: value_clipped[above] = vmax
-            else: mask |= above
-        below = value_clipped < vmin
-        if below.sum() > 0:
-            if clip: value_clipped[below] = vmin
-            else: mask |= below
-        # apply norm function
-        outvalue = self.function(value_clipped)
-        # masking for invalid values
-        invalid = numpy.isfinite(outvalue) == False
-        if invalid.sum() > 0:
-            mask |= invalid
-        # scale to interval 0 to 1
-        outvalue = (outvalue-fvmin)/(fvmax-fvmin)
-        return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
-
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
     def __init__(self,parent = None,view = None):
