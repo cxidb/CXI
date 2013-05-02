@@ -226,6 +226,11 @@ class View2D(View,QtOpenGL.QGLWidget):
 
         self.setAcceptDrops(True)
 #        self.time1 = time.time()
+
+        self.slideshowTimer = QtCore.QTimer()
+        self.slideshowTimer.setInterval(2000)
+        self.slideshowTimer.timeout.connect(self.nextSlide)
+
     def stopThreads(self):
         while(self.imageLoader.isRunning()):
             self.imageLoader.quit()
@@ -706,7 +711,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         # Do not allow zooming
        # self.scaleZoom(1+(event.delta()/8.0)/360)
 
-    def clipTranslation(self):
+    def clipTranslation(self,wrap=False):
         # Translation is bounded by top_margin < translation < bottom_margin
         if(self.has_data):
             margin = self.subplotBorder*3
@@ -717,7 +722,10 @@ class View2D(View,QtOpenGL.QGLWidget):
             stack_height = (self.getNImages()/self.stackWidth+1)*img_height
             bottom_margin = max(0,stack_height+margin-self.height())
             if(self.translation[1] > bottom_margin):
-                self.translation[1] = bottom_margin
+                if not wrap:
+                    self.translation[1] = bottom_margin
+                else:
+                    self.translation[1] = 0
     def keyPressEvent(self, event):
         delta = self.width()/20
         img_height =  self.data.getCXIHeight()*self.zoom+self.subplotBorder
@@ -774,7 +782,16 @@ class View2D(View,QtOpenGL.QGLWidget):
         #    else:
         #        self.viewer.showFullScreen()
 
-
+    def toggleSlideShow(self):
+        if self.slideshowTimer.isActive():
+            self.slideshowTimer.stop()
+        else:
+            self.slideshowTimer.start()
+    def nextSlide(self):
+        img_height =  self.data.getCXIHeight()*self.zoom+self.subplotBorder
+        self.translation[1] += img_height
+        self.clipTranslation(True)
+        self.updateGL()
     def mouseReleaseEvent(self, event):
         self.dragging = False
         # Select even when draggin
