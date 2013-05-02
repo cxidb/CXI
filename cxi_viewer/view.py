@@ -181,7 +181,7 @@ class ImageLoader(QtCore.QObject):
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
-    clearLoaderThread = QtCore.Signal(int)
+#    clearLoaderThread = QtCore.Signal(int)
     imageSelected = QtCore.Signal(int) 
     def __init__(self,viewer,parent=None):
         View.__init__(self,parent,"image")
@@ -210,7 +210,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.loaderThread = ImageLoader(None,self)
         self.needsImage.connect(self.loaderThread.loadImage)
         self.loaderThread.imageLoaded.connect(self.generateTexture)
-        self.clearLoaderThread.connect(self.loaderThread.clear)
+#        self.clearLoaderThread.connect(self.loaderThread.clear)
 
         self.imageLoader = QtCore.QThread()
         self.loaderThread.moveToThread(self.imageLoader)    
@@ -902,7 +902,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.setData()
         self.setMask()
         self.setSortingIndices()
-        self.clearLoaderThread.emit(0)
+        self.loaderThread.clear()
+#        self.clearLoaderThread.emit(0)
         self.clearTextures()
         self.updateGL()
     def clearTextures(self):
@@ -910,7 +911,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         glDeleteTextures(self.maskTextures.values())
         self.imageTextures = {}
         self.maskTextures = {}
-        self.clearLoaderThread.emit(0)
+        self.loaderThread.clear()
+#        self.clearLoaderThread.emit(0)
     def setStackWidth(self,width):  
         ratio = float(self.stackWidth)/width 
         self.stackWidth = width 
