@@ -170,7 +170,7 @@ class DatasetProp(QtGui.QWidget):
         # clear all properties
         self.clear()
         # connect signals
-        self.imageStackSubplots.valueChanged.connect(self.emitDisplayProp)    
+        self.imageStackSubplots.editingFinished.connect(self.emitDisplayProp)    
         self.displayMax.editingFinished.connect(self.checkLimits)
         self.displayMin.editingFinished.connect(self.checkLimits)
         self.displayClamp.stateChanged.connect(self.emitDisplayProp)

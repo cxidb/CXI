@@ -10,6 +10,7 @@ import pyqtgraph
 import cxitree
 import OpenGL.GL.ARB.texture_float
 import sys
+import time
 
 class ViewSplitter(QtGui.QSplitter):
     def __init__(self,parent=None):
@@ -51,7 +52,7 @@ class View(QtCore.QObject):
             return numpy.array(self.data).flatten()
         elif nDims == 2:
             if self.data.isCXIStack():
-                return numpy.array(self.data[img_sorted,:,:])
+                return self.data[img_sorted,:,:]
             else:
                 return numpy.array(self.data[:,:])
     # MASK
@@ -132,47 +133,6 @@ class View1D(View,QtGui.QFrame):
                 self.p.setData(edges,hist)
 
 
-class FunctionNorm(colors.Normalize):
-    def __init__(self, normFunction, vmin=None, vmax=None, clip=False,offsetMinValue=None):
-        colors.Normalize.__init__(self,vmin,vmax,clip)
-        self.function = normFunction
-        self.clip = clip
-        self.offsetMinValue = offsetMinValue
-    def __call__(self,value,clip=None):
-        clip = self.clip
-        value_clipped = numpy.array(value,dtype="float")
-        if self.offsetMinValue != None:
-            offset = value_clipped[numpy.isfinite(value_clipped)].min() - self.offsetMinValue
-        else:
-            offset = 0
-        value_clipped -= offset
-        vmin = self.vmin - offset
-        vmax = self.vmax - offset
-        fvmin = self.function(vmin)
-        fvmax = self.function(vmax)
-        mask = numpy.isfinite(value_clipped) == False
-        # check validity of given vmin and vmax
-        if vmin > vmax or not numpy.isfinite(fvmin) or not numpy.isfinite(fvmax):
-            return numpy.ma.array(numpy.zeros_like(value),mask=numpy.ones_like(value),fill_value=1e+20)
-        # clipping / masking for values out of range
-        above = value_clipped > vmax
-        if above.sum() > 0:
-            if clip: value_clipped[above] = vmax
-            else: mask |= above
-        below = value_clipped < vmin
-        if below.sum() > 0:
-            if clip: value_clipped[below] = vmin
-            else: mask |= below
-        # apply norm function
-        outvalue = self.function(value_clipped)
-        # masking for invalid values
-        invalid = numpy.isfinite(outvalue) == False
-        if invalid.sum() > 0:
-            mask |= invalid
-        # scale to interval 0 to 1
-        outvalue = (outvalue-fvmin)/(fvmax-fvmin)
-        return numpy.ma.array(outvalue,mask=mask,fill_value=1e+20)
-
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
     def __init__(self,parent = None,view = None):
@@ -190,14 +150,14 @@ class ImageLoader(QtCore.QObject):
         data = self.view.getData(2,img)
         mask = self.view.getMask(2,img)
         self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
-        self.imageData[img] = data
         #X,Y = numpy.meshgrid(numpy.arange(self.imageData[img].shape[1]),numpy.arange(self.imageData[img].shape[0]))
         #self.imageData[img][:,:] = numpy.floor(X[:,:]/10.)
         #for i in range(self.imageData[img].shape[1]):
         #    print self.imageData[img][0,i]
+        self.imageData[img] = data[:]
         if(mask != None):
             self.maskData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
-            self.maskData[img] = mask
+            self.maskData[img] = mask[:]
         else:
             self.maskData[img] = None
         self.imageLoaded.emit(img)
@@ -224,7 +184,7 @@ class ImageLoader(QtCore.QObject):
 
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
-    clearLoaderThread = QtCore.Signal(int)
+#    clearLoaderThread = QtCore.Signal(int)
     imageSelected = QtCore.Signal(int) 
     def __init__(self,viewer,parent=None):
         View.__init__(self,parent,"image")
@@ -253,7 +213,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.loaderThread = ImageLoader(None,self)
         self.needsImage.connect(self.loaderThread.loadImage)
         self.loaderThread.imageLoaded.connect(self.generateTexture)
-        self.clearLoaderThread.connect(self.loaderThread.clear)
+#        self.clearLoaderThread.connect(self.loaderThread.clear)
 
         self.imageLoader = QtCore.QThread()
         self.loaderThread.moveToThread(self.imageLoader)    
@@ -265,7 +225,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.loadingImageAnimationTimer.start(100)
 
         self.setAcceptDrops(True)
-
+#        self.time1 = time.time()
     def stopThreads(self):
         while(self.imageLoader.isRunning()):
             self.imageLoader.quit()
@@ -348,30 +308,26 @@ class View2D(View,QtOpenGL.QGLWidget):
                 // loop through the first 16 bits
                 float bit = 1.0;
                 if(maskBits > 0.0){
-                for(int i = 0;i<16;i++){
-                    if(floor(mod(maskBits/bit,2.0)) == 1.0 && floor(mod(maskedBits/bit,2.0)) == 1.0){
-                        color.a = 0.0;
-                        gl_FragColor = color;
-                        return;
+                    for(int i = 0;i<16;i++){
+                        if(floor(mod(maskBits/bit,2.0)) == 1.0 && floor(mod(maskedBits/bit,2.0)) == 1.0){
+                            color.a = 0.0;
+                            gl_FragColor = color;
+                            return;
+                        }
+                        bit = bit*2.0;
                     }
-                    bit = bit*2.0;
-                }
                 }
 
-                // Apply Colormap
+                
                 uv[0] = (color.a-offset);
-                if (uv[0] < 0.0){
-                    uv[0] = 0.0;
-                }
-                if (uv[0] > scale){
-                    uv[0] = scale;
-                }
 
                 // Check for clamping 
                 uv[1] = 0.0;
                 if(uv[0] < 0.0){
                   if(clamp == 1){
                     uv[0] = 0.0;
+                    gl_FragColor = texture2D(cmap,uv);
+                    return;
                   }else{
                     color.a = 0.0;
                     gl_FragColor = color;
@@ -380,13 +336,16 @@ class View2D(View,QtOpenGL.QGLWidget):
                 }
                 if(uv[0] > scale){
                   if(clamp == 1){
-                    uv[0] = scale;
+                    uv[0] = 1.0;
+                    gl_FragColor = texture2D(cmap,uv);
+                    return;
                   }else{
                     color.a = 0.0;
                     gl_FragColor = color;
                     return;
                   }
                 }
+                // Apply Colormap
                 if(norm == 0){
                  // linear
                   uv[0] /= scale;
@@ -647,6 +606,9 @@ class View2D(View,QtOpenGL.QGLWidget):
         '''
         Drawing routine
         '''
+#        self.time2 = time.time()
+#        time3 = time.time()
+#        print '%s function took %0.3f ms' % ("Non paintGL", (self.time2-self.time1)*1000.0)
         if(not self.isValid() or not self.isVisible()):
             return
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -665,11 +627,14 @@ class View2D(View,QtOpenGL.QGLWidget):
                 img_height = self.data.getCXIHeight()
                 visible = self.visibleImages()
                 self.updateTextures(visible)
-                for i,img in enumerate(self.imageTextures):
+                for i,img in enumerate(set.intersection(set(self.imageTextures),set(visible))):
                     self.paintImage(img)
                 for img in (set(visible) - set(self.imageTextures)):
                     self.paintLoadingImage(img)
-        glFlush()
+#        glFlush()
+#        time4 = time.time()
+#        print '%s function took %0.3f ms' % ("paintGL", (time4-time3)*1000.0)
+#        self.time1 = time.time()
     def addToStack(self,data):
         pass
     def loadStack(self,data):
@@ -946,7 +911,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.setData()
         self.setMask()
         self.setSortingIndices()
-        self.clearLoaderThread.emit(0)
+        self.loaderThread.clear()
+#        self.clearLoaderThread.emit(0)
         self.clearTextures()
         self.updateGL()
     def clearTextures(self):
@@ -954,7 +920,8 @@ class View2D(View,QtOpenGL.QGLWidget):
         glDeleteTextures(self.maskTextures.values())
         self.imageTextures = {}
         self.maskTextures = {}
-        self.clearLoaderThread.emit(0)
+        self.loaderThread.clear()
+#        self.clearLoaderThread.emit(0)
     def setStackWidth(self,width):  
         ratio = float(self.stackWidth)/width 
         self.stackWidth = width 
