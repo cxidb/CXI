@@ -55,7 +55,7 @@ class DatasetButton(QtGui.QPushButton):
         self.setIconSize(QtCore.QSize(S,S))
         self.setToolTip("drag dataset here")
         self.setAcceptDrops(True)
-        self.setFixedSize(QtCore.QSize(Wtot,Htot))
+        #self.setFixedSize(QtCore.QSize(Wtot,Htot))
         if menu != None:
             self.setMenu(menu)
     def dragEnterEvent(self, e):
