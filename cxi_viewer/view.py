@@ -36,7 +36,7 @@ class View(QtCore.QObject):
         self.datasetMode = datasetMode
         self.setData()
         self.setMask()
-        self.setSortingIndices()
+        #self.setSortingIndices()
     # DATA
     def setData(self,dataset=None):
         self.data = dataset
@@ -45,14 +45,14 @@ class View(QtCore.QObject):
         else:
             self.has_data = False
         self.datasetChanged.emit(dataset,self.datasetMode)
-    def getData(self,nDims=2,img_sorted=0):
+    def getData(self,nDims=2,img=0):
         if self.data == None:
             return None
         elif nDims == 1:
             return numpy.array(self.data).flatten()
         elif nDims == 2:
             if self.data.isCXIStack():
-                return self.data[img_sorted,:,:]
+                return self.data[img,:,:]
             else:
                 return numpy.array(self.data[:,:])
     # MASK
@@ -146,7 +146,6 @@ class ImageLoader(QtCore.QObject):
         if(img in self.loaded):
            return
         self.loaded[img] = True
-        #img_sorted = self.view.getSortedIndex(img)
         data = self.view.getData(2,img)
         mask = self.view.getMask(2,img)
         self.imageData[img] = numpy.ones((self.view.data.getCXIHeight(),self.view.data.getCXIWidth()),dtype=numpy.float32)
@@ -209,6 +208,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.stackWidth = 1;
         self.has_data = False
         self.imageData = {}
+        self.indexProjector = IndexProjector()
 
         self.loaderThread = ImageLoader(None,self)
         self.needsImage.connect(self.loaderThread.loadImage)
@@ -634,8 +634,10 @@ class View2D(View,QtOpenGL.QGLWidget):
                 self.updateTextures(visible)
                 for i,img in enumerate(set.intersection(set(self.imageTextures),set(visible))):
                     self.paintImage(img)
+                    #pass
                 for img in (set(visible) - set(self.imageTextures)):
                     self.paintLoadingImage(img)
+                    #pass
 #        glFlush()
 #        time4 = time.time()
 #        print '%s function took %0.3f ms' % ("paintGL", (time4-time3)*1000.0)
@@ -654,6 +656,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         else:
             print "3D images not supported."
             sys.exit(-1)
+    # will have to be changed when filter is implemented
     def getNImages(self):
         if self.data.isCXIStack():
             return self.data.shape[0]
@@ -664,17 +667,18 @@ class View2D(View,QtOpenGL.QGLWidget):
         if(self.has_data is False):
             return visible
 
-        top_left = self.windowToImage(0,0,0,checkExistance=False,clip=False)
-        bottom_right = self.windowToImage(self.width(),self.height(),0,checkExistance=False,clip=False)
+        top_left = self.windowToViewIndex(0,0,0,checkExistance=False,clip=False)
+        bottom_right = self.windowToViewIndex(self.width(),self.height(),0,checkExistance=False,clip=False)
 
-        top_left = self.imageToCell(top_left)
-        bottom_right = self.imageToCell(bottom_right)
+        top_left = self.viewIndexToCell(top_left)
+        bottom_right = self.viewIndexToCell(bottom_right)
         nImages = self.getNImages()
         for x in numpy.arange(0,self.stackWidth):
             for y in numpy.arange(max(0,math.floor(top_left[1])),math.floor(bottom_right[1]+1)):
                 img = y*self.stackWidth+x
                 if(img < nImages):
-                    visible.append(y*self.stackWidth+x)
+                    img = self.indexProjector.projectIndex(img)
+                    visible.append(img)
         return visible
     @QtCore.Slot(int)
     def generateTexture(self,img):
@@ -889,7 +893,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         (x,y,z) =  gluUnProject(x, viewport[3]-y,z , model=modelview, proj=projection, view=viewport)
         return (x,y,z)
     # Returns the index of the image that it at a particular window location
-    def windowToImage(self,x,y,z,checkExistance=True, clip=True):
+    def windowToViewIndex(self,x,y,z,checkExistance=True, clip=True):
         if(self.has_data > 0):
             shape = (self.data.getCXIHeight(),self.data.getCXIWidth())
             modelview = glGetDoublev(GL_MODELVIEW_MATRIX)
@@ -903,13 +907,21 @@ class View2D(View,QtOpenGL.QGLWidget):
             if(checkExistance and x + y*self.stackWidth >= self.getNImages()):
                 return None
             return x + y*self.stackWidth
-
-    # Returns the column and row from an image index
+    def windowToImage(self,x,y,z,checkExistance=True, clip=True):
+        return self.indexProjector.projectIndex(self.windowToViewIndex(x,y,z,checkExistance,clip))
+    # Returns the column and row from an view index
+    def viewIndexToCell(self,img):
+        if(img is None):
+            return img
+        else:
+            return (img%self.stackWidth,int(img/self.stackWidth))
+    # Returns the column and row from an imagex
     def imageToCell(self,img):
         if(img is None):
             return img
-        return (img%self.stackWidth,int(img/self.stackWidth))
-
+        else:
+            img0 = self.indexProjector.backProjectIndex(img)
+            return self.viewIndexToCell(img0)
 
     def scaleZoom(self,ratio):
         self.zoom *= ratio
@@ -927,7 +939,7 @@ class View2D(View,QtOpenGL.QGLWidget):
     def clear(self):
         self.setData()
         self.setMask()
-        self.setSortingIndices()
+        #self.setSortingIndices()
         self.loaderThread.clear()
 #        self.clearLoaderThread.emit(0)
         self.clearTextures()
@@ -1128,3 +1140,64 @@ def compileShader( source, shaderType ):
         )
     return shader
 
+
+class IndexProjector():
+    def __init__(self):
+        self.clear()
+
+    def addFilter(self,filterLabel,data,vmin=None,vmax=None):
+        self.filters[filterLabel] = {"vmin": vmin,
+                                     "vmax": vmax,
+                                     "data": data}
+        self.update()
+
+    def removeFilter(self,filterLabel):
+        del self.filters[filterLabel]
+        self.update()
+        
+    def setSortingArray(self,data=None):
+        self.sortingArray = data
+        self.update()
+
+    def update(self):
+        self.projectedIndices = None
+
+        # apply sorting
+        if self.sortingArray != None:        
+            self.projectedIndices = numpy.argsort(self.sortingArray)[-1::-1]
+
+        # apply filters
+        if self.filters != {}:
+            if self.projectedIndices == None:
+                self.projectedIndices = numpy.arange(N)
+            N = len(self.filters[self.filters.keys()[0]]["data"])
+            filterMask = numpy.ones(N,dtype="bool")
+            for key in self.filters.keys():
+                if self.filters[key]["vmin"] != None:
+                    filterMask *= self.filters[key]["data"] >= self.filters[key]["vmin"]
+                if self.filters[key]["vmax"] != None:
+                    filterMask *= self.filters[key]["data"] <= self.filters[key]["vmax"]
+            self.projectedIndices = self.projectedIndices[filterMask]
+
+    def getNProjections(self):
+        return len(self.projectedIndices)
+
+    def projectIndex(self,index):
+        if self.projectedIndices == None or index == None:
+            return index
+        else:
+            return self.projectedIndices[int(index)]
+
+    def backProjectIndex(self,index):
+        if self.projectedIndices == None or index == None:
+            return index
+        else:
+            return numpy.where(self.projectedIndices==index)[0]
+
+    def clear(self):
+        self.filters = {}
+        self.sortingArray = None
+        self.projectedIndices = None
+        self.update()
+
+     

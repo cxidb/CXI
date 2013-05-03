@@ -146,8 +146,15 @@ class CXINavigation(QtGui.QWidget):
         self.datasetBoxes["mask"] = DatasetBox("./icons/mask_simple.png","mask",self.maskMenu)
         self.vbox.addLayout(self.datasetBoxes["mask"])
 
-        self.datasetBoxes["sorting"] = DatasetBox("./icons/sort.png","sorting")
-        self.vbox.addLayout(self.datasetBoxes["sorting"])
+        self.datasetBoxes["filter"] = DatasetBox("./icons/filter.png","filter")
+        self.vbox.addLayout(self.datasetBoxes["filter"])
+
+        self.datasetBoxes["sort"] = DatasetBox("./icons/sort.png","sort")
+        self.vbox.addLayout(self.datasetBoxes["sort"])
+
+        line = QtGui.QFrame()
+        line.setFrameShape(QtGui.QFrame.HLine)
+        self.vbox.addWidget(line)
 
         self.plotMenu = PlotMenu(self)
         self.datasetBoxes["plot"] = DatasetBox("./icons/plot.png","plot",self.plotMenu)
@@ -163,10 +170,6 @@ class CXINavigation(QtGui.QWidget):
         self.clear()
         self.setText(t)
         self.needDataset.emit(t)
-
-    
-
-
 
 class CXITree(QtGui.QTreeWidget):
     datasetClicked = QtCore.Signal(str)    

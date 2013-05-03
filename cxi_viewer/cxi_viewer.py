@@ -68,7 +68,7 @@ class Viewer(QtGui.QMainWindow):
         self.CXINavigation.datasetBoxes["image"].button.needDataset.connect(self.handleNeedDatasetImage)
         self.CXINavigation.datasetBoxes["mask"].button.needDataset.connect(self.handleNeedDatasetMask)
         self.CXINavigation.maskMenu.triggered.connect(self.handleMaskOutBitsChanged)
-        self.CXINavigation.datasetBoxes["sorting"].button.needDataset.connect(self.handleNeedDatasetSorting)
+        self.CXINavigation.datasetBoxes["sort"].button.needDataset.connect(self.handleNeedDatasetSorting)
         self.CXINavigation.datasetBoxes["plot"].button.needDataset.connect(self.handleNeedDatasetPlot)
         self.CXINavigation.plotMenu.triggered.connect(self.handlePlotModeTriggered)
         self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
@@ -247,14 +247,6 @@ class Viewer(QtGui.QMainWindow):
             QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets of given shape. The selected dataset has %d dimensions." %(len(dataset.shape))))
             return
         self.datasetProp.setDataset(dataset)
-    def handleSortDatasetChanged(self,dataset):
-        format = dataset.getCXIFormat()
-        if(format == 1):
-            self.view.view2D.setSortingIndices(dataset)
-            self.view.view2D.clearTextures()
-            self.view.view2D.updateGL()
-        else:
-            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot sort with a dataset that has more than one dimension. The selected dataset has %d dimensions." %(len(dataset.shape))))
     def handleNeedDatasetImage(self,datasetName):
         dataset = self.CXINavigation.CXITree.datasets[datasetName]
         format = dataset.getCXIFormat()
@@ -289,7 +281,12 @@ class Viewer(QtGui.QMainWindow):
     def handleMaskOutBitsChanged(self,action):
         self.view.view2D.setMaskOutBits(self.CXINavigation.maskMenu.getMaskOutBits())
     def handleNeedDatasetSorting(self,datasetName):
-        pass
+        dataset = self.CXINavigation.CXITree.datasets[datasetName]
+        if dataset.getCXIFormat() == 0:
+            self.view.view2D.indexProjector.setSortingArray(dataset)
+            self.CXINavigation.datasetBoxes["sort"].button.setName(datasetName)
+            self.statusBar.showMessage("Loaded sorting dataset: %s" % dataset.name,1000)
+            self.view.view2D.updateGL()
     def handleNeedDatasetPlot(self,datasetName):
         dataset = self.CXINavigation.CXITree.datasets[datasetName]
         plotMode = self.CXINavigation.plotMenu.getPlotMode()
