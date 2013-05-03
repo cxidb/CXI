@@ -219,7 +219,12 @@ class Viewer(QtGui.QMainWindow):
         settings = QtCore.QSettings()
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
-        settings.setValue("colormap", self.datasetProp.currDisplayProp['colormapText'])        
+        settings.setValue("colormap", self.datasetProp.currDisplayProp['colormapText']) 
+        settings.setValue("normScaling", self.datasetProp.currDisplayProp['normScaling'])
+        settings.setValue("normGamma", self.datasetProp.currDisplayProp['normGamma'])
+        settings.setValue("normClamp", self.datasetProp.currDisplayProp['normClamp'])
+        settings.setValue("normVmin", self.datasetProp.currDisplayProp['normVmin'])
+        settings.setValue("normVmax", self.datasetProp.currDisplayProp['normVmax'])
         QtGui.QMainWindow.closeEvent(self,event)
     def preferencesClicked(self):
         diag = PreferencesDialog(self)

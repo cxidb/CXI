@@ -255,11 +255,40 @@ class DatasetProp(QtGui.QWidget):
         P["normGamma"] = self.displayGamma.value()
         self.intensityHistogramRegion.setRegion([self.displayMin.value(),self.displayMax.value()])
     def clearNorm(self):
-        self.displayMin.setValue(10.)
-        self.displayMax.setValue(1000.)
-        self.displayClamp.setChecked(True)
-        self.displayGamma.setValue(0.25)
-        self.displayLog.setChecked(True)
+        settings = QtCore.QSettings()
+
+
+        if(settings.contains("normVmax")):
+            normVmax = settings.value('normVmax')
+        else:
+            normVmax = 1000.
+        if(settings.contains("normVmin")):
+            normVmin = settings.value('normVmin')
+        else:
+            normVmin = 10.
+        self.displayMin.setValue(normVmin)
+        self.displayMax.setValue(normVmax)
+        if(settings.contains("normClamp")):
+            normClamp = settings.value('normClamp')
+        else:
+            normClamp = True
+        self.displayClamp.setChecked(normClamp)
+        if(settings.contains("normGamma")):
+            self.displayGamma.setValue(settings.value("normGamma"))
+        else:
+            self.displayGamma.setValue(0.25)
+        if(settings.contains("normScaling")):
+            norm = settings.value("normScaling")
+            if(norm == "lin"):
+                self.displayLin.setChecked(True)
+            elif(norm == "log"):
+                self.displayLog.setChecked(True)
+            elif(norm == "pow"):
+                self.displayPow.setChecked(True)
+            else:
+                sys.exit(-1)
+        else:
+            self.displayLog.setChecked(True)
         self.setNorm()
     # COLORMAP
     def setColormap(self,foovalue=None):
