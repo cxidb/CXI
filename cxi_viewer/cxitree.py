@@ -14,8 +14,8 @@ def isCXIStack(dataset):
 h5py.Dataset.isCXIStack = isCXIStack 
 def getCXIFormat(dataset):
     N = len(dataset.shape)
-    if dataset.isCXIStack():
-        N -= 1
+    if dataset.isCXIStack() and N == 3:
+        N = 2
     return N
 h5py.Dataset.getCXIFormat = getCXIFormat
 def isCXIText(dataset):
@@ -44,8 +44,9 @@ h5py.Dataset.getCXIHeight = getCXIHeight
 
 class DatasetButton(QtGui.QPushButton):
     needDataset = QtCore.Signal(str)    
-    def __init__(self,imageFile,datasetMode,menu=None):
+    def __init__(self,datasetBox,imageFile,datasetMode,menu=None):
         QtGui.QPushButton.__init__(self)
+        self.datasetBox = datasetBox
         self.datasetMode = datasetMode
         self.setName()
         self.setIcon(QtGui.QIcon(imageFile))
@@ -55,7 +56,6 @@ class DatasetButton(QtGui.QPushButton):
         self.setIconSize(QtCore.QSize(S,S))
         self.setToolTip("drag dataset here")
         self.setAcceptDrops(True)
-        #self.setFixedSize(QtCore.QSize(Wtot,Htot))
         if menu != None:
             self.setMenu(menu)
     def dragEnterEvent(self, e):
@@ -75,16 +75,28 @@ class DatasetButton(QtGui.QPushButton):
             self.setText(name)
 
 class DatasetBox(QtGui.QHBoxLayout):
-    def __init__(self,imageFile,datasetMode,menu=None):
+    def __init__(self,imageFile,datasetMode,menu):
         QtGui.QHBoxLayout.__init__(self)
-        self.button = DatasetButton(imageFile,datasetMode,menu)
+        self.menu = menu
+        self.button = DatasetButton(self,imageFile,datasetMode,menu)
         self.addWidget(self.button)
         self.vbox = QtGui.QVBoxLayout()
         self.addLayout(self.vbox)
+        if menu != None:
+            self.menu.clearAction.triggered.connect(self.clear)
+    def clear(self):
+        self.button.setName()
+        self.button.needDataset.emit(None)
 
-class MaskMenu(QtGui.QMenu):
+class DatasetMenu(QtGui.QMenu):
     def __init__(self,parent=None):
         QtGui.QMenu.__init__(self,parent)
+        self.clearAction = self.addAction("Clear")
+
+class DatasetMaskMenu(DatasetMenu):
+    def __init__(self,parent=None):
+        DatasetMenu.__init__(self,parent)
+        self.addSeparator()
         self.PIXELMASK_BITS = {'perfect' : 0,# PIXEL_IS_PERFECT
                                'invalid' : 1,# PIXEL_IS_INVALID
                                'saturated' : 2,# PIXEL_IS_SATURATED
@@ -109,10 +121,12 @@ class MaskMenu(QtGui.QMenu):
             if self.maskActions[key].isChecked():
                 maskOutBits |= self.PIXELMASK_BITS[key]
         return maskOutBits
+        
 
-class PlotMenu(QtGui.QMenu):
+class DatasetPlotMenu(DatasetMenu):
     def __init__(self,parent=None):
-        QtGui.QMenu.__init__(self,parent)
+        DatasetMenu.__init__(self,parent)
+        self.addSeparator()
         actionGroup = QtGui.QActionGroup(self)
         actionGroup.setExclusive(True)
         self.plotActions = {}
@@ -125,7 +139,8 @@ class PlotMenu(QtGui.QMenu):
     def getPlotMode(self):
         for key in self.plotActions.keys():
             if self.plotActions[key].isChecked():
-                return key
+                return key        
+
 
 class CXINavigation(QtGui.QWidget):
     def __init__(self,parent=None):
@@ -134,42 +149,56 @@ class CXINavigation(QtGui.QWidget):
         self.vbox = QtGui.QVBoxLayout()
         self.setLayout(self.vbox)
 
-        self.CXITree = CXITree(self)
-        self.vbox.addWidget(self.CXITree)
-
+        self.datasetMenus = {}
         self.datasetBoxes = {}
 
-        self.datasetBoxes["image"] = DatasetBox("./icons/image.png","image")
+        self.datasetMenus["image"] = DatasetMenu(self)
+        self.datasetBoxes["image"] = DatasetBox("./icons/image.png","image",self.datasetMenus["image"])
         self.vbox.addLayout(self.datasetBoxes["image"])
 
-        self.maskMenu = MaskMenu(self)
-        self.datasetBoxes["mask"] = DatasetBox("./icons/mask_simple.png","mask",self.maskMenu)
+        self.datasetMenus["mask"] = DatasetMaskMenu(self)
+        self.datasetBoxes["mask"] = DatasetBox("./icons/mask_simple.png","mask",self.datasetMenus["mask"])
         self.vbox.addLayout(self.datasetBoxes["mask"])
 
-        self.datasetBoxes["filter"] = DatasetBox("./icons/filter.png","filter")
-        self.vbox.addLayout(self.datasetBoxes["filter"])
-
-        self.datasetBoxes["sort"] = DatasetBox("./icons/sort.png","sort")
+        self.datasetMenus["sort"] = DatasetMenu(self)
+        self.datasetBoxes["sort"] = DatasetBox("./icons/sort.png","sort",self.datasetMenus["sort"])
         self.vbox.addLayout(self.datasetBoxes["sort"])
+
+        self.datasetBoxes["filter0"] = DatasetBox("./icons/filter.png","filter",None)
+        self.vbox.addLayout(self.datasetBoxes["filter0"])
+
+        self.vboxFilters = QtGui.QVBoxLayout()
+        #self.vboxFilters.setDirection(QtGui.QBoxLayout.BottomToTop)
+        self.vbox.addLayout(self.vboxFilters)
+        self.datasetMenus["filters"] = []
+        self.datasetBoxes["filters"] = []
 
         line = QtGui.QFrame()
         line.setFrameShape(QtGui.QFrame.HLine)
         self.vbox.addWidget(line)
 
-        self.plotMenu = PlotMenu(self)
-        self.datasetBoxes["plot"] = DatasetBox("./icons/plot.png","plot",self.plotMenu)
+        self.datasetMenus["plot"] = DatasetPlotMenu(self)
+        self.datasetBoxes["plot"] = DatasetBox("./icons/plot.png","plot",self.datasetMenus["plot"])
         self.vbox.addLayout(self.datasetBoxes["plot"])
 
-    def dragEnterEvent(self, e):
-        if e.mimeData().hasFormat('text/plain'):
-            e.accept()
-        else:
-            e.ignore() 
-    def dropEvent(self, e):
-        t = e.mimeData().text()
-        self.clear()
-        self.setText(t)
-        self.needDataset.emit(t)
+        self.CXITree = CXITree(self)
+        self.vbox.addWidget(self.CXITree)
+
+    def addFilterBox(self):
+        menu = DatasetMenu(self)
+        self.datasetMenus["filters"].append(menu)
+        box = DatasetBox("./icons/filter.png","filter",menu)
+        self.datasetBoxes["filters"].append(box)
+        self.vboxFilters.addLayout(box)
+        return box
+
+    def removeFilterBox(self,filterBox):
+        i = self.datasetBoxes["filters"].index(filterBox)
+        self.datasetBoxes["filters"][i].removeWidget(self.datasetBoxes["filters"][i].button)
+        self.datasetBoxes["filters"][i].button.setParent(None)
+        self.datasetBoxes["filters"].pop(i)
+        self.datasetMenus["filters"].pop(i)
+        
 
 class CXITree(QtGui.QTreeWidget):
     datasetClicked = QtCore.Signal(str)    
@@ -194,12 +223,12 @@ class CXITree(QtGui.QTreeWidget):
         self.f = h5py.File(filename, "r")
         self.root = QtGui.QTreeWidgetItem(["/"])
         self.addTopLevelItem(self.root)
-        item = QtGui.QTreeWidgetItem([QtCore.QFileInfo(filename).fileName()])
-        item.setToolTip(0,filename)
+        self.item = QtGui.QTreeWidgetItem([QtCore.QFileInfo(filename).fileName()])
+        self.item.setToolTip(0,filename)
         self.root.setExpanded(True)
-        self.root.addChild(item)
-        self.buildBranch(self.f,item)
-        self.loadData1(item)
+        self.root.addChild(self.item)
+        self.buildBranch(self.f,self.item)
+        self.loadData1()
     def buildBranch(self,group,item):
         self.columnPath = 1
         for g in group.keys():
@@ -226,20 +255,20 @@ class CXITree(QtGui.QTreeWidget):
                     child = QtGui.QTreeWidgetItem(lst)
                     child.setToolTip(self.columnPath-1,string)
                     numDims = dataset.getCXIFormat()
-                    S = 70
-                    # 1D
+                    S = 50
+                    # 1D blue
                     if numDims == 1:
                         R = 255-S
                         G = 255-S
                         B = 255
                         prop = "1D"
-                    # 2D red
+                    # 2D gree
                     elif numDims == 2:
                         R = 255-S
                         G = 255
                         B = 255-S 
                         prop = "2D"
-                    # 3D blue
+                    # 3D red
                     elif numDims == 3:
                         R = 255
                         G = 255-S
@@ -265,8 +294,8 @@ class CXITree(QtGui.QTreeWidget):
                         font.setBold(True)
                         child.setFont(0,font)
                 item.addChild(child)
-    def loadData1(self,item):
-        root = item
+    def loadData1(self):
+        root = self.item
         root.setExpanded(True)
         path = ("entry_1","data_1","data")
         for section in path:

@@ -94,19 +94,24 @@ class View(QtCore.QObject):
         self.needDataset.emit(e.mimeData().text())
 
 class View1D(View,QtGui.QFrame):
+    eventSelected = QtCore.Signal(int)
     def __init__(self,parent=None):
         View.__init__(self,parent,"plot")
         QtGui.QFrame.__init__(self,parent)
         self.hbox = QtGui.QHBoxLayout(self)
         margin = 20
         self.hbox.setContentsMargins(margin,margin,margin,margin)
-        self.plot = pyqtgraph.PlotWidget()
         self.initPlot()
         self.hbox.addWidget(self.plot)
         self.setLayout(self.hbox)
         self.p = None
         self.setAcceptDrops(True)
     def initPlot(self):
+        self.plot = pyqtgraph.PlotWidget()
+        line = pyqtgraph.InfiniteLine(0,90,None,True)
+        self.plot.addItem(line)
+        line.sigPositionChangeFinished.connect(self.emitEventSelected)    
+        self.line = line
         space = 60
         self.plot.getAxis("top").setHeight(space)
         self.plot.getAxis("bottom").setHeight(space)
@@ -131,7 +136,9 @@ class View1D(View,QtGui.QFrame):
                 self.p = self.plot.plot(edges,hist, pen=(255,0,0))
             else:
                 self.p.setData(edges,hist)
-
+    def emitEventSelected(self,foovalue=None):
+        index = int(self.line.getXPos())
+        self.eventSelected.emit(index)
 
 class ImageLoader(QtCore.QObject):
     imageLoaded = QtCore.Signal(int) 
@@ -184,7 +191,8 @@ class ImageLoader(QtCore.QObject):
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
 #    clearLoaderThread = QtCore.Signal(int)
-    imageSelected = QtCore.Signal(int) 
+    imageSelected = QtCore.Signal(int)
+    visibleImgChanged = QtCore.Signal(int)
     def __init__(self,viewer,parent=None):
         View.__init__(self,parent,"image")
         format =  QtOpenGL.QGLFormat();
@@ -638,6 +646,8 @@ class View2D(View,QtOpenGL.QGLWidget):
                 for img in (set(visible) - set(self.imageTextures)):
                     self.paintLoadingImage(img)
                     #pass
+                # Emit current index
+                self.visibleImgChanged.emit(visible[0])
 #        glFlush()
 #        time4 = time.time()
 #        print '%s function took %0.3f ms' % ("paintGL", (time4-time3)*1000.0)
@@ -796,6 +806,11 @@ class View2D(View,QtOpenGL.QGLWidget):
         self.translation[1] += img_height
         self.clipTranslation(True)
         self.updateGL()
+    def browseToImg(self,img):
+        img_height =  self.data.getCXIHeight()*self.zoom+self.subplotBorder
+        viewIndex = self.indexProjector.projectIndex(img)
+        self.translation[1] = img_height*viewIndex/self.stackWidth
+        self.updateGL()
     def mouseReleaseEvent(self, event):
         self.dragging = False
         # Select even when draggin
@@ -892,7 +907,7 @@ class View2D(View,QtOpenGL.QGLWidget):
         viewport = glGetIntegerv(GL_VIEWPORT);
         (x,y,z) =  gluUnProject(x, viewport[3]-y,z , model=modelview, proj=projection, view=viewport)
         return (x,y,z)
-    # Returns the index of the image that it at a particular window location
+    # Returns the view index (index after sorting and filtering) of the image that is at a particular window location
     def windowToViewIndex(self,x,y,z,checkExistance=True, clip=True):
         if(self.has_data > 0):
             shape = (self.data.getCXIHeight(),self.data.getCXIWidth())
@@ -907,6 +922,7 @@ class View2D(View,QtOpenGL.QGLWidget):
             if(checkExistance and x + y*self.stackWidth >= self.getNImages()):
                 return None
             return x + y*self.stackWidth
+    # Returns the index of the image that is at a particular window location
     def windowToImage(self,x,y,z,checkExistance=True, clip=True):
         return self.indexProjector.projectIndex(self.windowToViewIndex(x,y,z,checkExistance,clip))
     # Returns the column and row from an view index
@@ -926,7 +942,7 @@ class View2D(View,QtOpenGL.QGLWidget):
     def scaleZoom(self,ratio):
         self.zoom *= ratio
         self.translation[0] *= ratio
-        self.translation[1] *= ratio           
+        self.translation[1] *= ratio
         self.updateGL()
     # Calculate the appropriate zoom level such that the windows will exactly fill the viewport widthwise
     def zoomFromStackWidth(self,width):
@@ -987,6 +1003,7 @@ class View2D(View,QtOpenGL.QGLWidget):
                 self.normClamp = 0
             self.colormapText = datasetProp["colormapText"]
             self.setStackWidth(datasetProp["imageStackSubplotsValue"])
+            self.indexProjector.setFilterMask(datasetProp["filterMask"])
         self.updateGL()
 
 # Temporary code to fix a bug in PyOpenGL which validates shaders too early
@@ -1145,14 +1162,8 @@ class IndexProjector():
     def __init__(self):
         self.clear()
 
-    def addFilter(self,filterLabel,data,vmin=None,vmax=None):
-        self.filters[filterLabel] = {"vmin": vmin,
-                                     "vmax": vmax,
-                                     "data": data}
-        self.update()
-
-    def removeFilter(self,filterLabel):
-        del self.filters[filterLabel]
+    def setFilterMask(self,filterMask):
+        self.filterMask = filterMask
         self.update()
         
     def setSortingArray(self,data=None):
@@ -1166,18 +1177,11 @@ class IndexProjector():
         if self.sortingArray != None:        
             self.projectedIndices = numpy.argsort(self.sortingArray)[-1::-1]
 
-        # apply filters
-        if self.filters != {}:
+        # apply filter
+        if self.filterMask != []:
             if self.projectedIndices == None:
-                self.projectedIndices = numpy.arange(N)
-            N = len(self.filters[self.filters.keys()[0]]["data"])
-            filterMask = numpy.ones(N,dtype="bool")
-            for key in self.filters.keys():
-                if self.filters[key]["vmin"] != None:
-                    filterMask *= self.filters[key]["data"] >= self.filters[key]["vmin"]
-                if self.filters[key]["vmax"] != None:
-                    filterMask *= self.filters[key]["data"] <= self.filters[key]["vmax"]
-            self.projectedIndices = self.projectedIndices[filterMask]
+                self.projectedIndices = numpy.arange(len(self.filterMask))
+            self.projectedIndices = self.projectedIndices[self.filterMask]
 
     def getNProjections(self):
         return len(self.projectedIndices)
@@ -1195,7 +1199,7 @@ class IndexProjector():
             return numpy.where(self.projectedIndices==index)[0]
 
     def clear(self):
-        self.filters = {}
+        self.filterMask = []
         self.sortingArray = None
         self.projectedIndices = None
         self.update()

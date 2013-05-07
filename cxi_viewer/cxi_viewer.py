@@ -67,12 +67,15 @@ class Viewer(QtGui.QMainWindow):
         self.view.view2D.datasetChanged.connect(self.handleDatasetChanged)
         self.CXINavigation.datasetBoxes["image"].button.needDataset.connect(self.handleNeedDatasetImage)
         self.CXINavigation.datasetBoxes["mask"].button.needDataset.connect(self.handleNeedDatasetMask)
-        self.CXINavigation.maskMenu.triggered.connect(self.handleMaskOutBitsChanged)
+        self.CXINavigation.datasetMenus["mask"].triggered.connect(self.handleMaskOutBitsChanged)
         self.CXINavigation.datasetBoxes["sort"].button.needDataset.connect(self.handleNeedDatasetSorting)
         self.CXINavigation.datasetBoxes["plot"].button.needDataset.connect(self.handleNeedDatasetPlot)
-        self.CXINavigation.plotMenu.triggered.connect(self.handlePlotModeTriggered)
+        self.CXINavigation.datasetMenus["plot"].triggered.connect(self.handlePlotModeTriggered)
+        self.CXINavigation.datasetBoxes["filter0"].button.needDataset.connect(self.handleNeedDatasetFilter)
         self.datasetProp.displayPropChanged.connect(self.handleDisplayPropChanged)
         self.view.view2D.imageSelected.connect(self.datasetProp.onImageSelected)
+        self.view.view2D.visibleImgChanged.connect(self.datasetProp.refreshDatasetImg)
+        self.view.view1D.eventSelected.connect(self.handleEventSelected)    
 
         self.datasetProp.emitDisplayProp()
 
@@ -234,29 +237,13 @@ class Viewer(QtGui.QMainWindow):
                 settings.setValue("scrollDirection",-1)
             else:
                 settings.setValue("scrollDirection",1)
-    def handleViewDatasetChanged(self,dataset):
-        format = dataset.getCXIFormat()
-        if format == 1:
-            self.view.setCurrentWidget(self.view.view1D)
-            self.view.view1D.loadData(dataset)
-        elif format == 2:
-            self.view.setCurrentWidget(self.view.view2D)
-            self.datasetProp.clear()
-            self.view.view2D.clear()
-            if dataset.isCXIStack():
-                self.view.view2D.loadStack(dataset)
-            else:
-                self.view.view2D.loadImage(dataset)
-            self.statusBar.showMessage("Loaded %s" % dataset.name,1000)
-        elif format == 3:
-            QtGui.QMessageBox.warning(self,self.tr("CXI Viewer"),self.tr("Cannot display datasets of given shape. The selected dataset has %d dimensions." %(len(dataset.shape))))
+    def handleNeedDatasetImage(self,datasetName=None):
+        if str(datasetName) == "":
+            self.CXINavigation.CXITree.loadData1()
             return
-        self.datasetProp.setDataset(dataset)
-    def handleNeedDatasetImage(self,datasetName):
         dataset = self.CXINavigation.CXITree.datasets[datasetName]
         format = dataset.getCXIFormat()
         if format == 2:        
-            #self.view.setCurrentWidget(self.view.view2D)
             self.CXINavigation.datasetBoxes["image"].button.setName(datasetName)
             self.datasetProp.clear()
             self.view.view2D.clear()
@@ -275,31 +262,67 @@ class Viewer(QtGui.QMainWindow):
                 self.handleNeedDatasetMask(group+"/mask")
             elif group+"/mask_shared" in self.CXINavigation.CXITree.datasets.keys():
                 self.handleNeedDatasetMask(group+"/mask_shared")
-    def handleNeedDatasetMask(self,datasetName):
-        dataset = self.CXINavigation.CXITree.datasets[datasetName]
-        maskOutBits = self.CXINavigation.maskMenu.getMaskOutBits()
-        self.view.view2D.setMask(dataset,maskOutBits)
-        self.view.view2D.clearTextures()
-        self.view.view2D.updateGL()
-        self.CXINavigation.datasetBoxes["mask"].button.setName(datasetName)
-        self.statusBar.showMessage("Loaded mask: %s" % dataset.name,1000)
-    def handleMaskOutBitsChanged(self,action):
-        self.view.view2D.setMaskOutBits(self.CXINavigation.maskMenu.getMaskOutBits())
-    def handleNeedDatasetSorting(self,datasetName):
-        dataset = self.CXINavigation.CXITree.datasets[datasetName]
-        if dataset.getCXIFormat() == 0:
-            self.view.view2D.indexProjector.setSortingArray(dataset)
-            self.CXINavigation.datasetBoxes["sort"].button.setName(datasetName)
-            self.statusBar.showMessage("Loaded sorting dataset: %s" % dataset.name,1000)
+    def handleNeedDatasetMask(self,datasetName=None):
+        if str(datasetName) == "":
+            self.view.view2D.setMask()
+            self.view.view2D.clearTextures()
             self.view.view2D.updateGL()
+            self.CXINavigation.datasetBoxes["mask"].button.setName()
+            self.statusBar.showMessage("Reset mask.",1000)
+        else:
+            dataset = self.CXINavigation.CXITree.datasets[datasetName]
+            maskOutBits = self.CXINavigation.datasetMenus["mask"].getMaskOutBits()
+            self.view.view2D.setMask(dataset,maskOutBits)
+            self.view.view2D.clearTextures()
+            self.view.view2D.updateGL()
+            self.CXINavigation.datasetBoxes["mask"].button.setName(datasetName)
+            self.statusBar.showMessage("Loaded mask: %s" % dataset.name,1000)
+    def handleMaskOutBitsChanged(self,action):
+        self.view.view2D.setMaskOutBits(self.CXINavigation.datasetMenus["mask"].getMaskOutBits())
+    def handleNeedDatasetFilter(self,datasetName):
+        senderBox = self.sender().datasetBox
+        if self.CXINavigation.datasetBoxes["filter0"] == senderBox:
+            dataset = self.CXINavigation.CXITree.datasets[datasetName]
+            if dataset.getCXIFormat() == 0:
+                targetBox = self.CXINavigation.addFilterBox()
+                self.datasetProp.addFilter(dataset)
+                targetBox.button.setName(datasetName)
+                targetBox.button.needDataset.connect(self.handleNeedDatasetFilter)
+        else:
+            i = self.CXINavigation.datasetBoxes["filters"].index(senderBox)
+            if str(datasetName) == "":
+                self.datasetProp.removeFilter(i)
+                self.CXINavigation.removeFilterBox(senderBox)
+            else:
+                targetBox = senderBox
+                self.datasetProp.refreshFilter(dataset,i)
+                targetBox.button.setName(datasetName)
+                self.statusBar.showMessage("Loaded filter dataset: %s" % dataset.name,1000)
+    def handleNeedDatasetSorting(self,datasetName):
+        if str(datasetName) == "":
+            self.view.view2D.indexProjector.setSortingArray()
+            self.CXINavigation.datasetBoxes["sort"].button.setName()
+            self.statusBar.showMessage("Reser sorting.",1000)
+            self.view.view2D.updateGL()
+        else:
+            dataset = self.CXINavigation.CXITree.datasets[datasetName]
+            if dataset.getCXIFormat() == 0:
+                self.view.view2D.indexProjector.setSortingArray(dataset)
+                self.CXINavigation.datasetBoxes["sort"].button.setName(datasetName)
+                self.statusBar.showMessage("Loaded sorting dataset: %s" % dataset.name,1000)
+                self.view.view2D.updateGL()
     def handleNeedDatasetPlot(self,datasetName):
-        dataset = self.CXINavigation.CXITree.datasets[datasetName]
-        plotMode = self.CXINavigation.plotMenu.getPlotMode()
-        self.view.view1D.show()
-        self.view.view1D.loadData(dataset,plotMode)
-        self.CXINavigation.datasetBoxes["plot"].button.setName(datasetName)
-        self.statusBar.showMessage("Loaded plot: %s" % dataset.name,1000)
-        self.viewActions["View 1D"].setChecked(True)
+        if str(datasetName) == "":
+            self.view1D.hide()
+            self.viewActions["View 1D"].setChecked(False)
+        else:
+            dataset = self.CXINavigation.CXITree.datasets[datasetName]
+            plotMode = self.CXINavigation.datasetMenus["plot"].getPlotMode()
+            self.view.view1D.show()
+            self.view.view1D.loadData(dataset,plotMode)
+            self.CXINavigation.datasetBoxes["plot"].button.setName(datasetName)
+            self.statusBar.showMessage("Loaded plot: %s" % dataset.name,1000)
+            self.viewActions["View 1D"].setChecked(True)
     def handlePlotModeTriggered(self,foovalue=None):
         datasetName = self.CXINavigation.datasetBoxes["plot"].button.text()
         if datasetName in self.CXINavigation.CXITree.datasets.keys():
@@ -322,6 +345,9 @@ class Viewer(QtGui.QMainWindow):
         else:
             n = None
         self.CXINavigation.datasetBoxes[datasetMode].button.setName(n)
+    def handleEventSelected(self,index):
+        self.view.view2D.browseToImg(index)
+
 
 class PreferencesDialog(QtGui.QDialog):
     def __init__(self,parent):

@@ -51,10 +51,12 @@ class DatasetProp(QtGui.QWidget):
         self.datatype = QtGui.QLabel("Data Type:", parent=self)
         self.datasize = QtGui.QLabel("Data Size:", parent=self)
         self.dataform = QtGui.QLabel("Data Form:", parent=self)
+        self.currentImg = QtGui.QLabel("Visible Image:", parent=self)
         self.generalBox.vbox.addWidget(self.dimensionality)
         self.generalBox.vbox.addWidget(self.datatype)
         self.generalBox.vbox.addWidget(self.datasize)
         self.generalBox.vbox.addWidget(self.dataform)
+        self.generalBox.vbox.addWidget(self.currentImg)
         # properties: image stack
         self.imageStackBox = QtGui.QGroupBox("Image Stack Properties");
         self.imageStackBox.vbox = QtGui.QVBoxLayout()
@@ -160,11 +162,19 @@ class DatasetProp(QtGui.QWidget):
         self.imageBox.vbox.addLayout(hbox)
 
         self.imageBox.hide()
+
+        self.filterBox = QtGui.QGroupBox("Filters");
+        self.filterBox.vbox = QtGui.QVBoxLayout()
+        self.filterBox.setLayout(self.filterBox.vbox)
+        self.filterBox.hide()
+        self.filters = []
+
         # add all widgets to main vbox
         self.vboxScroll.addWidget(self.generalBox)
         self.vboxScroll.addWidget(self.imageStackBox)
         self.vboxScroll.addWidget(self.imageBox)
         self.vboxScroll.addWidget(self.displayBox)
+        self.vboxScroll.addWidget(self.filterBox)
         self.vboxScroll.addStretch()
         self.setLayout(self.vbox)
         # clear all properties
@@ -209,6 +219,8 @@ class DatasetProp(QtGui.QWidget):
                 self.imageStackBox.hide()
         else:
             self.clearDataset()
+    def refreshDatasetImg(self,img):
+        self.currentImg.setText("Visible Image: %i" % img)
     def clearDataset(self):
         self.dataset = None
         self.dimensionality.setText("Dimensions: ")
@@ -219,7 +231,7 @@ class DatasetProp(QtGui.QWidget):
     # VIEW
     def onImageSelected(self,selectedImage):
         self.imageStackImageSelected.setText(str(selectedImage))
-        if(selectedImage != None):
+        if self.dataset != None and selectedImage != None:
             self.imageRange.setText("%d to %d" %(numpy.min(self.dataset[selectedImage]),numpy.max(self.dataset[selectedImage])))
             self.imageSum.setText(str(numpy.sum(self.dataset[selectedImage])))
             self.imageBox.show()
@@ -229,7 +241,7 @@ class DatasetProp(QtGui.QWidget):
             item = self.intensityHistogram.plot(edges,hist,fillLevel=0,fillBrush=QtGui.QColor(255, 255, 255, 128),antialias=True)
             self.intensityHistogram.getPlotItem().getViewBox().setMouseEnabled(x=False,y=False)
             region = pyqtgraph.LinearRegionItem(values=[self.displayMin.value(),self.displayMax.value()],brush="#ffffff15")
-            region.sigRegionChangeFinished.connect(self.onHistogramClicked)    
+            region.sigRegionChangeFinished.connect(self.onHistogramClicked)
             self.intensityHistogram.addItem(region)
             self.intensityHistogram.autoRange()
             self.intensityHistogramRegion = region
@@ -308,11 +320,72 @@ class DatasetProp(QtGui.QWidget):
     def clearImageStackSubplots(self):
         self.imageStackSubplots.setValue(1)
         self.setImageStackSubplots()
+    # FILTERS
+    def addFilter(self,dataset):
+        filterWidget = FilterWidget(self,dataset)
+        filterWidget.limitsChanged.connect(self.emitDisplayProp)
+        filterWidget.isActive = True
+        self.filterBox.vbox.addWidget(filterWidget)
+        self.filters.append(filterWidget)
+        self.filterBox.show()
+        filterWidget.refreshDataset(dataset)
+        self.setFilters()
+    def removeFilter(self,index):
+        filterWidget = self.getFilterFromIndex(index)
+        self.filterBox.vbox.removeWidget(filterWidget)
+        filterWidget.setParent(None)
+        filterWidget.histogram.clear()
+        #filterWidget.histogram.setParent(None)
+        #filterWidget.histogram.deleteLater()
+        filterWidget.isActive = False
+        #self.filters.pop(index)
+        self.setFilters()
+        if self.getActiveFilters() == []:
+            self.filterBox.hide()
+    def setFilters(self,fooRegion=None):
+        P = self.currDisplayProp
+        P["filterMask"] = []
+        Ntot = None
+        Nsel = None
+        for f in self.filters:
+            if f.isActive:
+                if P["filterMask"] == []:
+                    P["filterMask"] = numpy.ones(len(f.dataset),dtype="bool")
+                vmin = f.vminSpinBox.value()
+                vmax= f.vmaxSpinBox.value()
+                data = numpy.array(f.dataset,dtype="float")
+                P["filterMask"] *= (data >= vmin) * (data <= vmax)
+                Ntot = len(data)
+                Nsel = P["filterMask"].sum()
+        if Nsel != None:
+            self.filterBox.setTitle("Filters (yield: %.2f%% - %i/%i)" % (100*Nsel/(1.*Ntot),Nsel,Ntot))
+        else:
+            self.filterBox.setTitle("Filters")
+    def refreshFilter(self,dataset,index):
+        self.getFilterFromIndex(index).refreshDataset(dataset)
+    def getActiveFilters(self):
+        activeFilters = []
+        for f in self.filters:
+            if f.isActive:
+                activeFilters.append(f)
+        return activeFilters
+    def getFilterFromIndex(self,index):
+        i = 0
+        j = 0
+        while i <= index:
+            if self.filters[j].isActive:
+                if i == index:
+                    return self.filters[j]
+                else:
+                    i+=1
+            j+=1
+        return None
     # update and emit current diplay properties
     def emitDisplayProp(self,foovalue=None):
         self.setImageStackSubplots()
         self.setNorm()
         self.setColormap()
+        self.setFilters()
         self.displayPropChanged.emit(self.currDisplayProp)
     def checkLimits(self,foovalue=None):
         self.displayMax.setMinimum(self.displayMin.value())
@@ -346,3 +419,80 @@ def paintColormapIcons(W,H):
         iconDict[m] = icon
     return iconDict
 
+
+class FilterWidget(QtGui.QWidget):
+    limitsChanged = QtCore.Signal(float,float)
+    def __init__(self,parent,dataset):
+        QtGui.QWidget.__init__(self,parent)
+        vbox = QtGui.QVBoxLayout()
+        nameLabel = QtGui.QLabel(dataset.name)
+        yieldLabel = QtGui.QLabel("")
+        histogram = pyqtgraph.PlotWidget(self)
+        histogram.hideAxis('left')
+        histogram.hideAxis('bottom')
+        histogram.setFixedHeight(50)
+        region = pyqtgraph.LinearRegionItem(values=[0,1],brush="#ffffff15")
+        region.sigRegionChangeFinished.connect(self.syncLimits)
+        histogram.addItem(region)
+        histogram.autoRange()
+        # Make the histogram fit the available width
+        histogram.setSizePolicy(QtGui.QSizePolicy.Ignored,QtGui.QSizePolicy.Preferred)
+        vbox.addWidget(histogram)
+        vbox.addWidget(nameLabel)
+        vbox.addWidget(yieldLabel)
+        hbox = QtGui.QHBoxLayout()
+        hbox.addWidget(QtGui.QLabel("Min.:"))
+        hbox.addWidget(QtGui.QLabel("Max.:"))
+        vbox.addLayout(hbox)
+        hbox = QtGui.QHBoxLayout()
+        vminSpinBox = QtGui.QDoubleSpinBox(self)
+        vminSpinBox.setMinimum(-10000.)
+        vminSpinBox.setMaximum(10000.)
+        vminSpinBox.setValue(numpy.min(dataset))
+        hbox.addWidget(vminSpinBox)
+        vmaxSpinBox = QtGui.QDoubleSpinBox(self)
+        vmaxSpinBox.setMinimum(-10000.)
+        vmaxSpinBox.setMaximum(10000.)
+        vmaxSpinBox.setValue(numpy.max(dataset))
+        hbox.addWidget(vmaxSpinBox)
+        vbox.addLayout(hbox)
+        self.setLayout(vbox)
+        self.dataset = dataset
+        self.histogram = histogram
+        self.histogram.region = region
+        #self.datasetBox = datasetBox
+        self.nameLabel = nameLabel
+        self.yieldLabel = yieldLabel
+        self.vminSpinBox = vminSpinBox
+        self.vmaxSpinBox = vmaxSpinBox
+        self.vbox = vbox
+        self.refreshDataset(dataset)
+        vminSpinBox.editingFinished.connect(self.emitLimitsChanged)
+        vmaxSpinBox.editingFinished.connect(self.emitLimitsChanged)
+    def refreshDataset(self,dataset):
+        self.nameLabel.setText(dataset.name)
+        self.yieldLabel.setText("")
+        self.dataset = dataset
+        (hist,edges) = numpy.histogram(dataset,bins=100)
+        self.histogram.clear()
+        edges = (edges[:-1]+edges[1:])/2.0
+        item = self.histogram.plot(edges,hist,fillLevel=0,fillBrush=QtGui.QColor(255, 255, 255, 128),antialias=True)
+        self.histogram.getPlotItem().getViewBox().setMouseEnabled(x=False,y=False)
+        region = pyqtgraph.LinearRegionItem(values=[self.vminSpinBox.value(),self.vmaxSpinBox.value()],brush="#ffffff15")
+        region.sigRegionChangeFinished.connect(self.syncLimits)
+        self.histogram.addItem(region)
+        self.histogram.autoRange()
+        self.histogram.region = region
+    def syncLimits(self):
+        (vmin,vmax) = self.histogram.region.getRegion()
+        self.vminSpinBox.setValue(vmin)
+        self.vmaxSpinBox.setValue(vmax)
+        self.emitLimitsChanged()
+    def emitLimitsChanged(self,foo=None):
+        data = numpy.array(self.dataset,dtype="float") 
+        Ntot = len(data)
+        Nsel = ((data<=self.vmaxSpinBox.value())*(data>=self.vminSpinBox.value())).sum()
+        label = "Yield: %.2f%% - %i/%i" % (100*Nsel/(1.*Ntot),Nsel,Ntot)
+        self.yieldLabel.setText(label)
+        self.limitsChanged.emit(self.vminSpinBox.value(),self.vmaxSpinBox.value())
+    
