@@ -167,7 +167,8 @@ class DatasetProp(QtGui.QWidget):
         self.filterBox.vbox = QtGui.QVBoxLayout()
         self.filterBox.setLayout(self.filterBox.vbox)
         self.filterBox.hide()
-        self.filters = []
+        self.activeFilters = []
+        self.inactiveFilters = []
 
         # add all widgets to main vbox
         self.vboxScroll.addWidget(self.generalBox)
@@ -322,64 +323,50 @@ class DatasetProp(QtGui.QWidget):
         self.setImageStackSubplots()
     # FILTERS
     def addFilter(self,dataset):
-        filterWidget = FilterWidget(self,dataset)
-        filterWidget.limitsChanged.connect(self.emitDisplayProp)
-        filterWidget.isActive = True
-        self.filterBox.vbox.addWidget(filterWidget)
-        self.filters.append(filterWidget)
+        if self.inactiveFilters == []:
+            filterWidget = FilterWidget(self,dataset)
+            filterWidget.limitsChanged.connect(self.emitDisplayProp)
+            self.filterBox.vbox.addWidget(filterWidget)
+            self.activeFilters.append(filterWidget)
+        else:
+            self.activeFilters.append(self.inactiveFilters.pop(0))
+            filterWidget = self.activeFilters[-1]
+            filterWidget.show()
+            filterWidget.refreshDataset(dataset)
+        self.setFilters()
         self.filterBox.show()
-        filterWidget.refreshDataset(dataset)
-        self.setFilters()
     def removeFilter(self,index):
-        filterWidget = self.getFilterFromIndex(index)
+        filterWidget = self.activeFilters.pop(index)
         self.filterBox.vbox.removeWidget(filterWidget)
-        filterWidget.setParent(None)
+        self.filterBox.vbox.addWidget(filterWidget)
+        self.inactiveFilters.append(filterWidget)
+        filterWidget.hide()
         filterWidget.histogram.clear()
-        #filterWidget.histogram.setParent(None)
-        #filterWidget.histogram.deleteLater()
-        filterWidget.isActive = False
-        #self.filters.pop(index)
+        filterWidget.hide()
         self.setFilters()
-        if self.getActiveFilters() == []:
+        if self.activeFilters == []:
             self.filterBox.hide()
     def setFilters(self,fooRegion=None):
         P = self.currDisplayProp
         P["filterMask"] = []
-        Ntot = None
-        Nsel = None
-        for f in self.filters:
-            if f.isActive:
+        if self.activeFilters != []:
+            for f in self.activeFilters:
                 if P["filterMask"] == []:
                     P["filterMask"] = numpy.ones(len(f.dataset),dtype="bool")
                 vmin = float(f.vminLineEdit.text())
                 vmax= float(f.vmaxLineEdit.text())
                 data = numpy.array(f.dataset,dtype="float")
                 P["filterMask"] *= (data >= vmin) * (data <= vmax)
-                Ntot = len(data)
-                Nsel = P["filterMask"].sum()
-        if Nsel != None:
-            self.filterBox.setTitle("Filters (yield: %.2f%% - %i/%i)" % (100*Nsel/(1.*Ntot),Nsel,Ntot))
+            Ntot = len(data)
+            Nsel = P["filterMask"].sum()
+            p = 100*Nsel/(1.*Ntot)
         else:
-            self.filterBox.setTitle("Filters")
+            Ntot = 0
+            Nsel = 0
+            p = 100.
+        self.filterBox.setTitle("Filters (yield: %.2f%% - %i/%i)" % (p,Nsel,Ntot))
     def refreshFilter(self,dataset,index):
-        self.getFilterFromIndex(index).refreshDataset(dataset)
-    def getActiveFilters(self):
-        activeFilters = []
-        for f in self.filters:
-            if f.isActive:
-                activeFilters.append(f)
-        return activeFilters
-    def getFilterFromIndex(self,index):
-        i = 0
-        j = 0
-        while i <= index:
-            if self.filters[j].isActive:
-                if i == index:
-                    return self.filters[j]
-                else:
-                    i+=1
-            j+=1
-        return None
+        self.activeFilters[index].refreshDataset(dataset)
     # update and emit current diplay properties
     def emitDisplayProp(self,foovalue=None):
         self.setImageStackSubplots()
@@ -433,12 +420,12 @@ class FilterWidget(QtGui.QWidget):
         histogram.hideAxis('left')
         histogram.hideAxis('bottom')
         histogram.setFixedHeight(50)
-        region = pyqtgraph.LinearRegionItem(values=[0,1],brush="#ffffff15")
+        # Make the histogram fit the available width
+        histogram.setSizePolicy(QtGui.QSizePolicy.Ignored,QtGui.QSizePolicy.Preferred)
+        region = pyqtgraph.LinearRegionItem(values=[vmin,vmax],brush="#ffffff15")
         region.sigRegionChangeFinished.connect(self.syncLimits)
         histogram.addItem(region)
         histogram.autoRange()
-        # Make the histogram fit the available width
-        histogram.setSizePolicy(QtGui.QSizePolicy.Ignored,QtGui.QSizePolicy.Preferred)
         vbox.addWidget(histogram)
         vbox.addWidget(nameLabel)
         vbox.addWidget(yieldLabel)
@@ -465,6 +452,7 @@ class FilterWidget(QtGui.QWidget):
         self.dataset = dataset
         self.histogram = histogram
         self.histogram.region = region
+        self.histogram.itemPlot = None
         #self.datasetBox = datasetBox
         self.nameLabel = nameLabel
         self.yieldLabel = yieldLabel
@@ -477,19 +465,21 @@ class FilterWidget(QtGui.QWidget):
     def refreshDataset(self,dataset):
         self.nameLabel.setText(dataset.name)
         Ntot = len(dataset)
+        vmin = numpy.min(dataset)
+        vmax = numpy.max(dataset)
         yieldLabelString = "Yield: %.2f%% - %i/%i" % (100.,Ntot,Ntot)
         self.yieldLabel.setText(yieldLabelString)
         self.dataset = dataset
         (hist,edges) = numpy.histogram(dataset,bins=100)
-        self.histogram.clear()
         edges = (edges[:-1]+edges[1:])/2.0
+        if self.histogram.itemPlot != None:
+            self.histogram.removeItem(self.histogram.itemPlot)
+        #self.histogram.clear()
         item = self.histogram.plot(edges,hist,fillLevel=0,fillBrush=QtGui.QColor(255, 255, 255, 128),antialias=True)
-        self.histogram.getPlotItem().getViewBox().setMouseEnabled(x=False,y=False)
-        region = pyqtgraph.LinearRegionItem(values=[float(self.vminLineEdit.text()),float(self.vmaxLineEdit.text())],brush="#ffffff15")
-        region.sigRegionChangeFinished.connect(self.syncLimits)
-        self.histogram.addItem(region)
+        item.getViewBox().setMouseEnabled(x=False,y=False)
+        self.histogram.itemPlot = item
+        self.histogram.region.setRegion([vmin,vmax])
         self.histogram.autoRange()
-        self.histogram.region = region
     def syncLimits(self):
         (vmin,vmax) = self.histogram.region.getRegion()
         self.vminLineEdit.setText("%.3e" % vmin)

@@ -295,6 +295,7 @@ class Viewer(QtGui.QMainWindow):
                 self.CXINavigation.removeFilterBox(senderBox)
             else:
                 targetBox = senderBox
+                dataset = self.CXINavigation.CXITree.datasets[datasetName]
                 self.datasetProp.refreshFilter(dataset,i)
                 targetBox.button.setName(datasetName)
                 self.statusBar.showMessage("Loaded filter dataset: %s" % dataset.name,1000)

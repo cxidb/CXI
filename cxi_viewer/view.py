@@ -658,26 +658,22 @@ class View2D(View,QtOpenGL.QGLWidget):
                 for img in (set(visible) - set(self.imageTextures)):
                     self.paintLoadingImage(img)
                     #pass
-                # Emit current index
-                self.visibleImgChanged.emit(visible[0])
+                if len(visible) > 0:
+                    # Emit current index
+                    self.visibleImgChanged.emit(visible[0])
 #        glFlush()
 #        time4 = time.time()
 #        print '%s function took %0.3f ms' % ("paintGL", (time4-time3)*1000.0)
 #        self.time1 = time.time()
     def addToStack(self,data):
         pass
-    def updateTotalSize(self):
-        Ny = self.data.getCXIHeight()*self.getNImages()
-        Nx = self.data.getCXIWidth()*self.stackWidth
     def loadStack(self,data):
         self.setData(data)
         self.setStackWidth(self.stackWidth)
-        self.updateTotalSize()
     def loadImage(self,data):
         if(data.getCXIFormat() == 2):        
             self.setData(data)
             self.setStackWidth(self.stackWidth)
-            self.updateTotalSize()
             self.clearTextures()
             self.updateGL()
         else:
@@ -689,6 +685,15 @@ class View2D(View,QtOpenGL.QGLWidget):
             return self.data.shape[0]
         else:
             return 1
+    def getNImagesVisible(self):
+        if not self.data.isCXIStack():
+            return 1
+        else:
+            pindices = self.indexProjector.projectedIndices
+            if pindices == None:
+                return self.getNImages()
+            else:
+                return len(pindices)
     def visibleImages(self):
         visible = []
         if(self.has_data is False):
@@ -699,12 +704,12 @@ class View2D(View,QtOpenGL.QGLWidget):
 
         top_left = self.viewIndexToCell(top_left)
         bottom_right = self.viewIndexToCell(bottom_right)
-        nImages = self.getNImages()
+        nImagesVisible = self.getNImagesVisible()
         for x in numpy.arange(0,self.stackWidth):
             for y in numpy.arange(max(0,math.floor(top_left[1])),math.floor(bottom_right[1]+1)):
-                img = y*self.stackWidth+x
-                if(img < nImages):
-                    img = self.indexProjector.projectIndex(img)
+                viewIndex = y*self.stackWidth+x
+                if(viewIndex < nImagesVisible):
+                    img = self.indexProjector.projectIndex(viewIndex)
                     visible.append(img)
         return visible
     @QtCore.Slot(int)
@@ -1199,14 +1204,13 @@ class IndexProjector():
                 self.projectedIndices = numpy.arange(len(self.filterMask))
             self.projectedIndices = self.projectedIndices[self.filterMask]
 
-    def getNProjections(self):
-        return len(self.projectedIndices)
-
     def projectIndex(self,index):
         if self.projectedIndices == None or index == None:
             return index
         else:
-            if int(index) >= len(self.projectedIndices):
+            if len(self.projectedIndices) == 0:
+                return 0
+            elif int(index) >= len(self.projectedIndices):
                 return self.projectedIndices[-1]
             else:
                 return self.projectedIndices[int(index)]
