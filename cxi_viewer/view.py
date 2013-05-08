@@ -12,13 +12,15 @@ import OpenGL.GL.ARB.texture_float
 import sys
 import time
 
+
 class ViewSplitter(QtGui.QSplitter):
     def __init__(self,parent=None):
         QtGui.QSplitter.__init__(self,parent)
         self.setOrientation(QtCore.Qt.Vertical)
 
-
         self.view2D = View2D(parent,self)
+        #self.view2DScrollWidget = View2DScrollWidget(self,self.view2D)
+        #self.addWidget(self.view2DScrollWidge)t
         self.addWidget(self.view2D)
 
         self.view1D = View1D(self)
@@ -26,6 +28,7 @@ class ViewSplitter(QtGui.QSplitter):
         self.addWidget(self.view1D)
 
         self.setSizes([1000,1000])
+
 
 class View(QtCore.QObject):
     needDataset = QtCore.Signal(str)
@@ -188,6 +191,15 @@ class ImageLoader(QtCore.QObject):
     #    self.mappable.set_norm(norm)
     #    self.mappable.set_clim(vmin,vmax)
 
+class View2DScrollWidget(QtGui.QWidget):
+    def __init__(self,parent,view2D):
+        QtGui.QWidget.__init__(self,parent)
+        self.view2D = view2D
+        hbox = QtGui.QHBoxLayout()
+        self.setLayout(hbox)
+        hbox.addWidget(view2D)
+        self.scrollbar = QtGui.QScrollBar(QtCore.Qt.Vertical,self)
+        
 class View2D(View,QtOpenGL.QGLWidget):
     needsImage = QtCore.Signal(int)
 #    clearLoaderThread = QtCore.Signal(int)
@@ -654,13 +666,18 @@ class View2D(View,QtOpenGL.QGLWidget):
 #        self.time1 = time.time()
     def addToStack(self,data):
         pass
+    def updateTotalSize(self):
+        Ny = self.data.getCXIHeight()*self.getNImages()
+        Nx = self.data.getCXIWidth()*self.stackWidth
     def loadStack(self,data):
         self.setData(data)
         self.setStackWidth(self.stackWidth)
+        self.updateTotalSize()
     def loadImage(self,data):
         if(data.getCXIFormat() == 2):        
             self.setData(data)
             self.setStackWidth(self.stackWidth)
+            self.updateTotalSize()
             self.clearTextures()
             self.updateGL()
         else:
@@ -717,14 +734,6 @@ class View2D(View,QtOpenGL.QGLWidget):
         for img in images:
             if(img not in self.imageTextures):
                 self.needsImage.emit(img)
-    def wheelEvent(self, event):    
-        settings = QtCore.QSettings()    
-        self.translation[1] -= event.delta()*float(settings.value("scrollDirection"))
-        self.clipTranslation()
-        self.updateGL()
-        # Do not allow zooming
-       # self.scaleZoom(1+(event.delta()/8.0)/360)
-
     def clipTranslation(self,wrap=False):
         # Translation is bounded by top_margin < translation < bottom_margin
         if(self.has_data):
@@ -740,6 +749,13 @@ class View2D(View,QtOpenGL.QGLWidget):
                     self.translation[1] = bottom_margin
                 else:
                     self.translation[1] = 0
+    def wheelEvent(self, event):    
+        settings = QtCore.QSettings()    
+        self.translation[1] -= event.delta()*float(settings.value("scrollDirection"))
+        self.clipTranslation()
+        self.updateGL()
+        # Do not allow zooming
+       # self.scaleZoom(1+(event.delta()/8.0)/360)
     def keyPressEvent(self, event):
         delta = self.width()/20
         img_height =  self.data.getCXIHeight()*self.zoom+self.subplotBorder
@@ -1190,7 +1206,10 @@ class IndexProjector():
         if self.projectedIndices == None or index == None:
             return index
         else:
-            return self.projectedIndices[int(index)]
+            if int(index) >= len(self.projectedIndices):
+                return self.projectedIndices[-1]
+            else:
+                return self.projectedIndices[int(index)]
 
     def backProjectIndex(self,index):
         if self.projectedIndices == None or index == None:

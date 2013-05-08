@@ -84,7 +84,7 @@ class Viewer(QtGui.QMainWindow):
 
     def after_show(self):
         if(len(sys.argv) > 1):
-            self.openCXIFile(sys.argv[1])
+            self.openCXIFile(sys.argv[1])        
     def openCXIFile(self,filename):
         self.CXINavigation.CXITree.buildTree(filename)
         self.handleNeedDatasetImage("/entry_1/data_1/data")
@@ -283,7 +283,7 @@ class Viewer(QtGui.QMainWindow):
         senderBox = self.sender().datasetBox
         if self.CXINavigation.datasetBoxes["filter0"] == senderBox:
             dataset = self.CXINavigation.CXITree.datasets[datasetName]
-            if dataset.getCXIFormat() == 0:
+            if dataset.getCXIFormat() == 1:
                 targetBox = self.CXINavigation.addFilterBox()
                 self.datasetProp.addFilter(dataset)
                 targetBox.button.setName(datasetName)
