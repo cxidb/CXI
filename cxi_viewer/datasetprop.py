@@ -351,8 +351,8 @@ class DatasetProp(QtGui.QWidget):
             if f.isActive:
                 if P["filterMask"] == []:
                     P["filterMask"] = numpy.ones(len(f.dataset),dtype="bool")
-                vmin = f.vminSpinBox.value()
-                vmax= f.vmaxSpinBox.value()
+                vmin = float(f.vminLineEdit.text())
+                vmax= float(f.vmaxLineEdit.text())
                 data = numpy.array(f.dataset,dtype="float")
                 P["filterMask"] *= (data >= vmin) * (data <= vmax)
                 Ntot = len(data)
@@ -427,6 +427,8 @@ class FilterWidget(QtGui.QWidget):
         vbox = QtGui.QVBoxLayout()
         nameLabel = QtGui.QLabel(dataset.name)
         yieldLabel = QtGui.QLabel("")
+        vmin = numpy.min(dataset)
+        vmax = numpy.max(dataset)
         histogram = pyqtgraph.PlotWidget(self)
         histogram.hideAxis('left')
         histogram.hideAxis('bottom')
@@ -445,16 +447,19 @@ class FilterWidget(QtGui.QWidget):
         hbox.addWidget(QtGui.QLabel("Max.:"))
         vbox.addLayout(hbox)
         hbox = QtGui.QHBoxLayout()
-        vminSpinBox = QtGui.QDoubleSpinBox(self)
-        vminSpinBox.setMinimum(-10000000.)
-        vminSpinBox.setMaximum(10000000.)
-        vminSpinBox.setValue(numpy.min(dataset))
-        hbox.addWidget(vminSpinBox)
-        vmaxSpinBox = QtGui.QDoubleSpinBox(self)
-        vmaxSpinBox.setMinimum(-10000000.)
-        vmaxSpinBox.setMaximum(10000000.)
-        vmaxSpinBox.setValue(numpy.max(dataset))
-        hbox.addWidget(vmaxSpinBox)
+        vminLineEdit = QtGui.QLineEdit(self)
+        vminLineEdit.setText("%.3e" % vmin)
+        validator = QtGui.QDoubleValidator()
+        validator.setDecimals(3)
+        validator.setNotation(QtGui.QDoubleValidator.ScientificNotation)
+        vminLineEdit.setValidator(validator)
+        hbox.addWidget(vminLineEdit)
+        vmaxLineEdit = QtGui.QLineEdit(self)
+        vmaxLineEdit.setText("%.3e" % vmax)
+        validator = QtGui.QDoubleValidator()
+        validator.setNotation(QtGui.QDoubleValidator.ScientificNotation)
+        vmaxLineEdit.setValidator(validator)
+        hbox.addWidget(vmaxLineEdit)
         vbox.addLayout(hbox)
         self.setLayout(vbox)
         self.dataset = dataset
@@ -463,36 +468,40 @@ class FilterWidget(QtGui.QWidget):
         #self.datasetBox = datasetBox
         self.nameLabel = nameLabel
         self.yieldLabel = yieldLabel
-        self.vminSpinBox = vminSpinBox
-        self.vmaxSpinBox = vmaxSpinBox
+        self.vminLineEdit = vminLineEdit
+        self.vmaxLineEdit = vmaxLineEdit
         self.vbox = vbox
         self.refreshDataset(dataset)
-        vminSpinBox.editingFinished.connect(self.emitLimitsChanged)
-        vmaxSpinBox.editingFinished.connect(self.emitLimitsChanged)
+        vminLineEdit.editingFinished.connect(self.emitLimitsChanged)
+        vmaxLineEdit.editingFinished.connect(self.emitLimitsChanged)
     def refreshDataset(self,dataset):
         self.nameLabel.setText(dataset.name)
-        self.yieldLabel.setText("")
+        Ntot = len(dataset)
+        yieldLabelString = "Yield: %.2f%% - %i/%i" % (100.,Ntot,Ntot)
+        self.yieldLabel.setText(yieldLabelString)
         self.dataset = dataset
         (hist,edges) = numpy.histogram(dataset,bins=100)
         self.histogram.clear()
         edges = (edges[:-1]+edges[1:])/2.0
         item = self.histogram.plot(edges,hist,fillLevel=0,fillBrush=QtGui.QColor(255, 255, 255, 128),antialias=True)
         self.histogram.getPlotItem().getViewBox().setMouseEnabled(x=False,y=False)
-        region = pyqtgraph.LinearRegionItem(values=[self.vminSpinBox.value(),self.vmaxSpinBox.value()],brush="#ffffff15")
+        region = pyqtgraph.LinearRegionItem(values=[float(self.vminLineEdit.text()),float(self.vmaxLineEdit.text())],brush="#ffffff15")
         region.sigRegionChangeFinished.connect(self.syncLimits)
         self.histogram.addItem(region)
         self.histogram.autoRange()
         self.histogram.region = region
     def syncLimits(self):
         (vmin,vmax) = self.histogram.region.getRegion()
-        self.vminSpinBox.setValue(vmin)
-        self.vmaxSpinBox.setValue(vmax)
+        self.vminLineEdit.setText("%.3e" % vmin)
+        self.vmaxLineEdit.setText("%.3e" % vmax)
         self.emitLimitsChanged()
     def emitLimitsChanged(self,foo=None):
         data = numpy.array(self.dataset,dtype="float") 
         Ntot = len(data)
-        Nsel = ((data<=self.vmaxSpinBox.value())*(data>=self.vminSpinBox.value())).sum()
+        vmin = float(self.vminLineEdit.text())
+        vmax = float(self.vmaxLineEdit.text())
+        Nsel = ( (data<=vmax)*(data>=vmin) ).sum()
         label = "Yield: %.2f%% - %i/%i" % (100*Nsel/(1.*Ntot),Nsel,Ntot)
         self.yieldLabel.setText(label)
-        self.limitsChanged.emit(self.vminSpinBox.value(),self.vmaxSpinBox.value())
+        self.limitsChanged.emit(vmin,vmax)
     
