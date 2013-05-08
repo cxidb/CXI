@@ -207,9 +207,7 @@ class View2D(View,QtOpenGL.QGLWidget):
     visibleImgChanged = QtCore.Signal(int)
     def __init__(self,viewer,parent=None):
         View.__init__(self,parent,"image")
-        format =  QtOpenGL.QGLFormat();
-        format.setVersion(1,1);
-        QtOpenGL.QGLWidget.__init__(self,format,parent)
+        QtOpenGL.QGLWidget.__init__(self,parent)
         self.viewer = viewer
         self.translation = [0,0]
         self.zoom = 4.0
