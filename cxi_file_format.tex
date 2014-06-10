@@ -88,6 +88,9 @@
 \usepackage[linkcolor=softBlue,colorlinks=true,urlcolor=softBlue]{hyperref}
 %\usepackage[table,usenames,dvipsnames]{color}
 
+% Use Utopia Fourier as font for normal text
+\usepackage{fourier}
+\usepackage[T1]{fontenc}
 
 \begin{document}
 
@@ -102,7 +105,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Version 1.3}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Version 1.4}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -174,6 +177,7 @@ Below are the main rules used in CXI files:
 \item{Non default units are defined using the {\tt units} attribute of relevant dataset, just like in NeXus.} 
 \end{itemize}
 
+\clearpage
 \section{CXI by example}
 \subsection{A minimal CXI file}
 Figure \ref{fig:minimal} shows a diagram a minimal CXI file. Each measurement (which is usually an exposure/shot) in a CXI file is stored inside a group named {\tt entry\_$N$} where $N$ is a positive integer. The first such entry should be named {\tt entry\_1} the second {\tt entry\_2} and so on. Each entry is a member of the NXentry class in NeXus language.
@@ -199,6 +203,85 @@ Each entry can have one or more data groups. In this case we only had one detect
 \end{figure}
 
 \clearpage
+
+\subsection{A CXI file with raw tomographic data}
+
+This file exemplifies the use of \hyperref[sec:scans]{Scans}.
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.7\textwidth]{tomography_cxi.pdf}
+\caption{Diagram of a CXI file for storing raw tomographic data.}
+\label{fig:tomography_raw_example}
+\end{figure}
+
+\clearpage
+
+\subsection{CXI file from a ptychography experiment}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.9\textwidth]{ptychography_cxi.pdf}
+\caption{Diagram of a CXI file with 256 diffraction images recorded on
+  a 1024x1024 pixels CCD detector from a ptychography experiment.}
+\label{fig:ptychography_cxi}
+\end{figure}
+
+
+\clearpage
+
+\subsection{CXI from a modular detector}
+
+This file exemplifies the use of \hyperref[subsec:modularDetectors]{Modular
+  Pixel Detector}.
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.9\textwidth]{modular_detector_cxi.pdf}
+\caption{Diagram of a CXI file with an image from a pixel detector made of 64
+  modules, such as the \hyperref[fig:cspad]{LCLS CSPAD}.}
+\label{fig:modular_detector_cxi}
+\end{figure}
+\clearpage
+
+
+\subsection{CXI stack of images from a modular detector}
+
+This file exemplifies the use of \hyperref[subsec:modularDetectors]{Modular
+  Pixel Detector} together with \hyperref[sec:scans]{Scans} to store a large
+dataset of 30,000 images.
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.9\textwidth]{stack_modular_detector_cxi.pdf}
+\caption{Diagram of a CXI file with a stack of 30,000 images from a pixel detector made of 64
+  modules, such as the \hyperref[fig:cspad]{LCLS CSPAD}.}
+\label{fig:stack_modular_detector_cxi}
+\end{figure}
+\clearpage
+
+\subsection{CXI file after initial analysis of a diffraction image}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{analysed_image.pdf}
+\caption{Diagram of a CXI file of an analysed image from a single
+particle diffraction experiment.}
+\label{fig:analysed_image}
+\end{figure}
+
+
+\clearpage
+\subsection{CXI file of a phased 3D image}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=\textwidth]{phased_image.pdf}
+\caption{Diagram of a CXI file of a phased 3D image from a single
+particle diffraction experiment.}
+\label{fig:phased_image}
+\end{figure}
+
+\clearpage
+
 \section{NeXus compatibility}
 One of the most appealing features of the CXI format is that while it is relatively simple it can still be unambiguously converted to follow the NeXus format.
 
@@ -463,6 +546,7 @@ sample is scanned, the dimensions of the data would be translation, y
 dimension of the CCD, x dimension of the CCD.
 
 \subsection{Dimension Scales}
+\label{subsec:dimscales}
 
 When using scans it is crucial to determine what variable corresponds
 to each dimension. To define this you need to use the {\em  axes
@@ -470,8 +554,10 @@ to each dimension. To define this you need to use the {\em  axes
 of names of the datasets that correspond to each dimension. The named
 dataset, or a link to it, should exist in the same group as the
 field with the axes attribute. The exception to this rule are the
-names ``y'' and ``x'' which are assumed to correspond to the number of
-pixels of the detector in each dimension.
+names which match the {\em implicit axes} of the dataset. For example
+``y'' and ``x'' which are assumed to correspond to the number of
+pixels of the detector in each dimension, for many datasets. For
+details about the {\em implicit axes} see the \hyperref[subsec:implaxes]{next subsection}.
 
 For example in the case of tomorgraphy the {\tt axes} attribute of the
 {\tt data} field could have the value {\tt orientation:y:x} and in
@@ -480,45 +566,60 @@ links to the orientation field of the sample being imaged. The ``x''
 and ``y'' are implicitly assumed to correspond to the detector
 dimensions.
 
+In another important use case, storing large XFEL datasets, the {\tt axes} 
+attribute of the {\tt data} field could have the value {\tt
+experiment\_identifier:y:x}, and a link named {\tt experiment\_identifier}
+pointing to the experiment\_identifier field at the \hyperref[table:entry]{Entry} level.
+The experiment\_identifier would then be a list of strings, one per shot, 
+with a unique identifier for each of the shots.
+
+\subsection{Implicit Axes}
+\label{subsec:implaxes}
+
+Every dataset with multiple dimensions has a set of {\em implicit axes} which
+describe what each dimension of the dataset correspond to. These implicit axes
+are described in the CXI entry reference for the group that contains the
+dataset. For example the \hyperref[table:detector]{Detector class} contains a
+{\tt corner\_position} dataset with implicit axes = {\tt coordinate}. For
+datasets which have more dimensions than implicit axes, the extra axes should be
+specified using the {\tt axes} attribute as described \hyperref[subsec:dimscales]{above}. For datasets with
+less dimensions than implicit axes, only the last axes apply. 
+
+\subsection{Modular Pixel Detectors}
+\label{subsec:modularDetectors}
+
+Nowadays many pixel array detectors are composed of many small modules tiled
+together, such as the (in)famous CSPAD at LCLS (see Fig. \ref{fig:cspad}).
+
+The best way to save such detector images in a CXI file is to populate the 
+``module\_identifier'' field of the Detector with a string identifier for each of
+the modules and add an extra dimension to all other fields, using
+\ref{sec:scans} scans, which would identify the module in question. 
+
+For example if we wished to save an image from a two piece detector we could set
+the module\_identifier to [``lower-half'', ``upper-half''], set the {\em
+  axes attribute} of the {\tt data} field to {\tt module\_identifier:y:x},
+and set the  {\em axes attribute} of the {\tt corner\_position} field to
+{\tt module\_identifier:coordinate}
+
+\begin{figure}[h!]
+\centering
+\includegraphics[width=0.6\textwidth]{cspad.pdf}
+\caption{The Cornell-SLAC Pixel Area Detector (CSPAD), an example a modular
+  pixel array detector. Note that the four quadrant can move with respect to
+  each other changing the size of the hole in the middle. Thus the detector
+  geometry is variable.}
+\label{fig:cspad}
+\end{figure}
+
+When storing large datasets with many images from modular detectors it's natural
+to combine the modular pixel detector feature with an image stack
+scan to create a 4D array representing the multiple 2D modules that make
+each image inside of a large stack of images. For an example see Fig. \ref{fig:stack_modular_detector_cxi}.
 \clearpage
 \appendix
-\section{More CXI file examples}
 
-\subsection{CXI file from a ptychography experiment}
-
-\begin{figure}[h!]
-\centering
-\includegraphics[width=0.9\textwidth]{ptychography_cxi.pdf}
-\caption{Diagram of a CXI file with 256 diffraction images recorded on
-  a 1024x1024 pixels CCD detector from a ptychography experiment.}
-\label{fig:ptychography_cxi}
-\end{figure}
-
-
-\clearpage
-\subsection{CXI file after initial analysis of a diffraction image}
-
-\begin{figure}[h!]
-\centering
-\includegraphics[width=\textwidth]{analysed_image.pdf}
-\caption{Diagram of a CXI file of an analysed image from a single
-particle diffraction experiment.}
-\label{fig:analysed_image}
-\end{figure}
-
-
-\clearpage
-\subsection{CXI file of a phased 3D image}
-
-\begin{figure}[h!]
-\centering
-\includegraphics[width=\textwidth]{phased_image.pdf}
-\caption{Diagram of a CXI file of a phased 3D image from a single
-particle diffraction experiment.}
-\label{fig:phased_image}
-\end{figure}
-
-\clearpage
+ 
 
 \section{CXI entries reference}
 
@@ -607,9 +708,9 @@ errors  & float/complex array & variable \\
 \end{tabular}
 \end{table}
 
-\member{data}{Most important data values}
+\member{data}{Most important data values. Implicit axes = {\tt y:x}.}
 
-\member{errors}{Standard deviations of data values}
+\member{errors}{Standard deviations of data values. Implicit axes = {\tt y:x}.}
 
 \subsection{Detector}
 \label{table:detector}
@@ -628,7 +729,7 @@ and geometry should be stored in this class.
 \midrule
 
 
-basis\_vectors & float array & length \\ 
+basis\_vectors & $N \times 3$ float array & length \\ 
 corner\_position & 3 floats & length \\
 counts\_per\_joule & float & unitless \\ 
 data     & float array & variable  \\
@@ -640,6 +741,7 @@ description & string & text \\
 distance     & float & length\\
 geometry\_1 &  \hyperref[table:geometry]{Geometry class} & \\
 mask & int array & unitless \\
+module\_identifier & string array & text \\
 x\_pixel\_size & float & length  \\
 y\_pixel\_size & float & length \\
 \bottomrule
@@ -647,11 +749,13 @@ y\_pixel\_size & float & length \\
 \end{table}
 
 \member{basis\_vectors}{A matrix with the basis vectors of the
-  detector data. For more details see \ref{ccd_orientation}.
+  detector data. For more details see \ref{ccd_orientation}. Implicit axes =
+  {\tt dimension:coordinate}.
 }
 
 \member{corner\_position}{The x, y and z coordinates of the corner of
-  the first data element. For more details see \ref{ccd_orientation}.
+  the first data element. For more details see \ref{ccd_orientation}. Implicit
+  axes = {\tt coordinate}.
 }
 
 \member{counts\_per\_joule}{Number of counts recorded per each joule of
@@ -662,20 +766,20 @@ y\_pixel\_size & float & length \\
 \end{equation*}
 }
 
-\member{data}{Recorded signal values.}
+\member{data}{Recorded signal values. Implicit axes = {\tt y:x}.}
 
 \member{data\_dark}{Image recorded with the shutter closed, used for
- background subtractions.}
+ background subtractions. Implicit axes = {\tt y:x}.}
 
 \member{data\_error}{The best estimate of the uncertainty in the data
 value. Where possible, this should be the standard deviation, which
-has the same units as the data.}
+has the same units as the data. Implicit axes = {\tt y:x}.}
 
 \member{data\_sum}{Sum of all the elements in the data array. This
   number is often userful as a cheap measure of data quality.}
 
 \member{data\_white}{Image recorded without the sample, used for
- background subtractions.}
+ background subtractions. Implicit axes = {\tt y:x}.}
 
 \member{description}{name/manufacturer/model/etc. information.}
 
@@ -727,7 +831,11 @@ CXI\_PIXEL\_NOT\_EXPOSED\\
 All other bits have no standard meaning and can be used for any
 purpose the user sees fit. More bits will be defined as the format
 evolves so users are encouranged to use the high bits to avoid collisions.
+Implicit axes = {\tt y:x}.
 }
+
+\member{module\_identifier}{A string identifier for each of the modules that
+  constitute the pixel detector. See also \hyperref[subsec:modularDetectors]{Modular Pixel Detector}.}
 
 \member{x\_pixel\_size}{Width of each detector pixel.}
 
@@ -806,11 +914,11 @@ translation & 3 floats & length \\
 \end{table}
 
 \member{orientation}{Dot products between the local and the global unit
-  vectors.}
+  vectors. Implicit axes = {\tt dot\_product}.}
 
 \member{translation}{The x, y and z components of the translation of the origin of the object
  relative to the origin of the global coordinate system (the place
- where the X-ray beam meets the sample).}
+ where the X-ray beam meets the sample). Implicit axes = {\tt coordinate}.}
 
 Only one orientation and one translation is permitted in each geometry
 class.
@@ -873,11 +981,11 @@ source\_$N$ &  \hyperref[table:source]{Source class} & \\
 \end{tabular}
 \end{table}
 
-\member{data}{The value of the image at each pixel.}
+\member{data}{The value of the image at each pixel. Implicit axes = {\tt y:x}.}
 
 \member{data\_error}{The best estimate of the uncertainty in the data
  value. Where possible, this should be the standard deviation, which
- has the same units as the data.}
+ has the same units as the data. Implicit axes = {\tt y:x}.}
 
 \member{data\_space}{Specifies if the image lives in real or diffraction (Fourier)
  space. Only has two valid values: ``real'' and ``diffraction''. }
@@ -903,12 +1011,14 @@ image.}
 \caption{Pixel coordinate system for a 2x2 pixels image.}
 \label{fig:pixel_coordinates}
 \end{figure}
+
+Implicit axes = {\tt coordinate}.
 }
 
 
 \member{image\_size}{The width, height and depth of the image. For
   real space images this corresponds to the length and for reciprocal
-  space ones to the inverse length of the sides of the image.}
+  space ones to the inverse length of the sides of the image. Implicit axes = {\tt dimension}.}
 
 \member{is\_fft\_shifted}{If set to 1 the image is assumed to have to
   the quadrants shifted (see Fig. \ref{fig:fft_shift}).
@@ -957,7 +1067,10 @@ parasitic light &
 
 All other bits have no standard meaning and can be used for any
 purpose the user sees fit. More bits will be defined as the format
-evolves so users are encouranged to use the high bits to avoid collisions.}
+evolves so users are encouranged to use the high bits to avoid collisions.
+
+Implicit axes = {\tt y:x}
+}
 
 \member{process\_$N$}{Processes used to obtain this image. They should
 be listed in chronological order with the first processed used named
@@ -967,7 +1080,10 @@ process\_1, the second process\_2 and so on.}
   coordinates of the center of each pixel. Note that the dimension corresponding to
   the 3 different components should go before the image dimensions. So
   for example for an image of size [10,20,5] te reciprocal\_coordinates
-will have size [3,10,20,5].}
+will have size [3,10,20,5].
+
+Implicit axes = {\tt coordinate:y:x}
+}
 
 \member{source\_$N$}{Link to the source used to obtain this image.}
 
@@ -1113,6 +1229,50 @@ version & string & text \\
 
 \member{version}{Version of the program used.}
 
+\subsection{Result}
+\label{table:result}
+
+This class should be used to store the results of an analysis procedure which
+produces non-image data (image data should be stored in the more specific
+\hyperref[table:image]{Image class}). It describes what analysis has been done,
+as well as holding important information for further processing. It should not
+be used for raw data storage, which should be stored in the Detector class.
+
+\begin{table}[h!]\sffamily \footnotesize
+\caption{Result class members}
+
+\rowcolors{1}{white}{tableBlue}
+\begin{tabular}{p{4.5cm} p{4.5cm}  p{2.5cm} }
+
+\toprule
+\bfseries Member     & \bfseries Type & \bfseries Quantity \\
+\midrule
+data &  float/complex array & variable \\
+data\_error & float/complex array & variable \\
+description & string & text \\
+detector\_$N$ &  \hyperref[table:detector]{Detector class} & \\
+process\_$N$ &  \hyperref[table:process]{Process class} & \\
+source\_$N$ &  \hyperref[table:source]{Source class} & \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\member{data}{The value of the image at each pixel. Implicit axes = {\tt y:x}.}
+
+\member{data\_error}{The best estimate of the uncertainty in the data
+ value. Where possible, this should be the standard deviation, which
+ has the same units as the data. Implicit axes = {\tt y:x}.}
+
+\member{description}{Short description of the analysis performed.}
+
+\member{detector\_$N$}{Link to the detectors used to obtain the input data for this
+analysis.}
+
+\member{process\_$N$}{Processes used to obtain this result. They should
+be listed in chronological order with the first processed used named
+process\_1, the second process\_2 and so on.}
+
+\member{source\_$N$}{Link to the source used to obtain the input data for this analysis.}
 
 \subsection{Sample}
 \label{table:sample}
@@ -1155,7 +1315,7 @@ unit\_cell\_volume & float & volume \\
 \member{temperature}{Sample temperature.}
 
 \member{unit\_cell}{Unit cell parameters (a,b,c
-  $\alpha,\beta,\gamma$).}
+  $\alpha,\beta,\gamma$). Implicit axes = {\tt unit\_cell}.}
 
 \member{unit\_cell\_group}{Crystallographic space group of the crystal
   in PDB format.}
@@ -1196,6 +1356,18 @@ pulse\_width  & float & time  \\
 
 \clearpage
 \section{Changes from previous versions}
+\subsection{Version 1.4}
+\begin{itemize}
+\item{Introduced the concept of \hyperref[sec:scans]{implicit axes}. }
+\item{Added support for \hyperref[subsec:modularDetectors]{modular pixel
+    detectors}.}
+\item{Added the module\_identifier field to the
+  \hyperref[table:detector]{Detector class} to support modular pixel detectors.}
+\item{Added a \hyperref[table:result]{Result class} to store non-image analysis
+  results.}
+\item{Added more examples, showing the use of scans and modular detectors.}
+\item{Moved the examples in the appendix to the main text.}
+\end{itemize}
 \subsection{Version 1.3}
 \begin{itemize}
 \item{Introduced \hyperref[sec:scans]{Scans}.}
