@@ -742,6 +742,8 @@ distance     & float & length\\
 geometry\_1 &  \hyperref[table:geometry]{Geometry class} & \\
 mask & int array & unitless \\
 module\_identifier & string array & text \\
+score & float array & variable \\
+tags & boolean array & unitless \\
 x\_pixel\_size & float & length  \\
 y\_pixel\_size & float & length \\
 \bottomrule
@@ -836,6 +838,28 @@ Implicit axes = {\tt y:x}.
 
 \member{module\_identifier}{A string identifier for each of the modules that
   constitute the pixel detector. See also \hyperref[subsec:modularDetectors]{Modular Pixel Detector}.}
+
+\member{score}{The score, or an array of scores for each of the measurements/images. The
+  fastest dimension should match the number of measurements and the slowest the
+  number of scores used. Dimensions with only one element can be collapsed
+  (e.g. if only one score type is used the array can be one dimensional).
+  Should have a {\tt headings} attribute containing an
+  array with the names of all the scores. {\tt score} is useful, for example,
+  to give a hit score to each image in a stack.}
+
+\member{tags}{The tags which apply to each of the measurements/images. The
+  fastest dimension should match the number of measurements and the slowest
+  the number of {\tt tags} used. Dimensions with only one element can be collapsed
+  (e.g. if there is only one image with multiple tags, the tags array can be one dimensional).
+  Each entry should be either a 1, signifying
+  that the measurement is tagged with that particular tag, or 0 otherwise.
+  As HDF5 currently does not have native boolean support the dataset should be
+  saved as an 8-bit integer, e.g. {\tt H5T\_NATIVE\_B8}. 
+  It should have a {\tt headings} attribute containing an array with the names
+  of all the {\tt tags}. Tags are useful for organizing and filtering large
+  datasets.}
+
+   
 
 \member{x\_pixel\_size}{Width of each detector pixel.}
 
@@ -1361,12 +1385,14 @@ pulse\_width  & float & time  \\
 \item{Introduced the concept of \hyperref[sec:scans]{implicit axes}. }
 \item{Added support for \hyperref[subsec:modularDetectors]{modular pixel
     detectors}.}
-\item{Added the module\_identifier field to the
+\item{Added the {\tt module\_identifier} field to the
   \hyperref[table:detector]{Detector class} to support modular pixel detectors.}
 \item{Added a \hyperref[table:result]{Result class} to store non-image analysis
   results.}
 \item{Added more examples, showing the use of scans and modular detectors.}
 \item{Moved the examples in the appendix to the main text.}
+\item{Added the {\tt tags} and {\tt score} fields \hyperref[table:detector]{Detector class} 
+  to aid with filtering and sorting large dataset.}
 \end{itemize}
 \subsection{Version 1.3}
 \begin{itemize}
