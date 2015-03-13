@@ -105,7 +105,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Version 1.4}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Version 1.5}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -808,24 +808,46 @@ checkings their values:
 \toprule
 \sf \bfseries Bit & \sf \bfseries Meaning & \sf \bfseries Constant \\
 \midrule
-\tt \bfseries 0x00000001 & \sf If set the pixel is valid & \tt
-CXI\_PIXEL\_IS\_VALID\\
+
+\tt \bfseries 0x00000001 & \sf If set the pixel is invalid & \tt
+CXI\_PIXEL\_IS\_INVALID\\
 \tt \bfseries 0x00000002 & \sf If set the pixel is saturated & \tt
 CXI\_PIXEL\_IS\_SATURATED\\
-\tt \bfseries 0x00000004 & \sf If set the pixel is hot & \tt CXI\_PIXEL\_IS\_HOT\\
-\tt \bfseries 0x00000008 & \sf If set the pixel is dead & \tt
+\tt \bfseries 0x00000004 & \sf If set the pixel is hot, meaning it typically reads a high
+value unrelated to the signal. & 
+\tt CXI\_PIXEL\_IS\_HOT\\
+\tt \bfseries 0x00000008 & \sf If set the pixel is dead, meaning it typically reads a low
+value unrelated to the signal. & \tt
 CXI\_PIXEL\_IS\_DEAD\\
-\tt \bfseries 0x00000010 & \sf If set the pixel is under a shadow &
-\tt CXI\_PIXEL\_IS\_SHADOWED\\
-\tt \bfseries 0x00000020 & \sf If set the pixel is iluminated by
-parasitic light &
-\tt CXI\_PIXEL\_IS\_PARASITIC\\
-\tt \bfseries 0x00000040 & \sf If set the pixel signal is above the background &
+\tt \bfseries 0x00000010 & \sf If set the pixel is under a shadow & \tt
+CXI\_PIXEL\_IS\_SHADOWED\\
+%% \tt \bfseries 0x00000020 & \sf If set the pixel should be included in hit/peak
+%% finding &
+%% \tt CXI\_PIXEL\_IS\_IN\_PEAKMASK\\
+\tt \bfseries 0x00000080 & \sf If set the pixel value should not be trusted, for
+undefined reasons. & \tt
+CXI\_PIXEL\_IS\_BAD\\
+%% \tt \bfseries 0x00000100 & \sf If set the pixel is outside the resolution range requested. & \tt
+%% CXI\_PIXEL\_IS\_OUT\_OF\_RESOLUTION\_LIMITS\\
+\tt \bfseries 0x00000200 & \sf If set the pixel does not correspond to a real
+pixel, but to a gap region in a modular detector. & \tt
+CXI\_PIXEL\_IS\_MISSING\\
+\tt \bfseries 0x00000400 & \sf If set the pixel contains unusually high levels
+of noise. & \tt
+CXI\_PIXEL\_IS\_NOISY\\
+%% \tt \bfseries 0x00000800 & \sf If set artifact correction was used on the
+%% pixel. &
+%% \tt CXI\_PIXEL\_IS\_ARTIFACT\_CORRECTED\\
+\tt \bfseries 0x00001000 & \sf If set the pixel signal is above the background &
 \tt CXI\_PIXEL\_HAS\_SIGNAL\\
-\tt \bfseries 0x00000080 & \sf If set the pixel does not exist & \tt
-CXI\_PIXEL\_DOES\_NOT\_EXIST\\
-\tt \bfseries 0x00000100 & \sf If set the pixel is not exposed & \tt
-CXI\_PIXEL\_NOT\_EXPOSED\\
+%% \tt \bfseries 0x00001000 & \sf If set the artifact correction used on the pixel failed. &
+%% \tt CXI\_PIXEL\_FAILED\_ARTIFACT\_CORRECTION\\
+%% \tt \bfseries 0x00002000 & \sf If set the artifact correction used on the pixel
+%% failed. &
+%% \tt CXI\_PIXEL\_IS\_PEAK\_FOR\_HITFINDER\\
+%% \tt \bfseries 0x00004000 & \sf If set the artifact correction used on the pixel
+%% failed. &
+%% \tt CXI\_PIXEL\_IS\_PHOTON\_BACKGROUND\_CORRECTED\\
 \bottomrule
 \end{tabular*}
 \end{table}
@@ -833,6 +855,7 @@ CXI\_PIXEL\_NOT\_EXPOSED\\
 All other bits have no standard meaning and can be used for any
 purpose the user sees fit. More bits will be defined as the format
 evolves so users are encouranged to use the high bits to avoid collisions.
+A pixel with no bits sets correspond to an ideal pixel.
 Implicit axes = {\tt y:x}.
 }
 
@@ -901,7 +924,8 @@ title & string & text \\
 \member{end\_time}{Ending time of measurement.}
 
 \member{experiment\_identifier}{Unique identifier for the experiment,
-defined by the facility, possibly linked to the proposals.}
+defined by the facility, possibly linked to the proposals, and each image in the
+dataset.}
 
 \member{experiment\_description}{Description of the experiment.}
 
@@ -1069,8 +1093,8 @@ checkings their values:
 \toprule
 \sf \bfseries Bit & \sf \bfseries Meaning & \sf \bfseries Constant \\
 \midrule
-\tt \bfseries 0x00000001 & \sf If set the pixel is valid & \tt
-CXI\_PIXEL\_IS\_VALID\\
+\tt \bfseries 0x00000001 & \sf If set the pixel is invalid & \tt
+CXI\_PIXEL\_IS\_INVALID\\
 \tt \bfseries 0x00000002 & \sf If set the pixel is saturated & \tt
 CXI\_PIXEL\_IS\_SATURATED\\
 \tt \bfseries 0x00000004 & \sf If set the pixel is hot & \tt CXI\_PIXEL\_IS\_HOT\\
@@ -1078,12 +1102,9 @@ CXI\_PIXEL\_IS\_SATURATED\\
 CXI\_PIXEL\_IS\_DEAD\\
 \tt \bfseries 0x00000010 & \sf If set the pixel is under a shadow &
 \tt CXI\_PIXEL\_IS\_SHADOWED\\
-\tt \bfseries 0x00000020 & \sf If set the pixel is iluminated by
-parasitic light &
-\tt CXI\_PIXEL\_IS\_PARASITIC\\
-\tt \bfseries 0x00000040 & \sf If set the pixel signal is above the background &
+\tt \bfseries 0x00001000 & \sf If set the pixel signal is above the background &
 \tt CXI\_PIXEL\_HAS\_SIGNAL\\
-\tt \bfseries 0x00000200 & \sf If set the pixel is inside of the reconstruction support &
+\tt \bfseries 0x00010000 & \sf If set the pixel is inside of the reconstruction support &
 \tt CXI\_PIXEL\_INSIDE\_SUPPORT\\
 \bottomrule
 \end{tabular*}
@@ -1275,6 +1296,14 @@ data &  float/complex array & variable \\
 data\_error & float/complex array & variable \\
 description & string & text \\
 detector\_$N$ &  \hyperref[table:detector]{Detector class} & \\
+experiment\_identifier & string  & text \\
+nPeaks & int array & unitless \\
+peakMaximumValue & float array & variable \\
+peakNPixels & int array & unitless \\
+peakSNR & float array & variable \\
+peakTotalIntensity & float array & variable \\
+peakXPosAssembled & float array & variable \\
+data &  float/complex array & variable \\
 process\_$N$ &  \hyperref[table:process]{Process class} & \\
 source\_$N$ &  \hyperref[table:source]{Source class} & \\
 \bottomrule
@@ -1291,6 +1320,53 @@ source\_$N$ &  \hyperref[table:source]{Source class} & \\
 
 \member{detector\_$N$}{Link to the detectors used to obtain the input data for this
 analysis.}
+
+\member{experiment\_identifier}{Unique identifier for the experiment,
+defined by the facility, possibly linked to the proposals, and each image in the
+dataset. Usually a symlink to the one in the respective \hyperref[table:entry]{Entry class}}
+
+\member{nPeaks}{Number of peaks in found in each image. 1D array with a length
+  equal to the number of images. Implicit axes = {\tt experiment\_identifier}.}
+
+\member{peakMaximumValue}{The maximum value within the peak. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakNPixels}{The number of pixels within the peak. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakSNR}{The signal to noise ratio in the peak. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakTotalIntensity}{The total intensity in the peak. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakXPosAssembled}{The x position of the peak in the assembled image. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakYPosAssembled}{The y position of the peak in the assembled image. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakXPosRaw}{The x position of the peak in the raw image. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
+
+\member{peakYPosRaw}{The y position of the peak in the raw image. 2D array with the
+  first (slow varying) dimension matching the number of images and the second
+  (fast varying) at least as big as the number of peaks in
+  the image. Any extra values should be ignored. Implicit axes = {\tt experiment\_identifier:nPeaks}.}
 
 \member{process\_$N$}{Processes used to obtain this result. They should
 be listed in chronological order with the first processed used named
@@ -1380,6 +1456,16 @@ pulse\_width  & float & time  \\
 
 \clearpage
 \section{Changes from previous versions}
+\subsection{Version 1.5}
+\begin{itemize}
+\item{Updated the mask bits (see \hyperref[table:image]{Image
+    class} and \hyperref[table:detector]{Detector class}) to match common usage
+  (in cheetah and owl). }
+%%\item{Added support for arrays of variable sized lists.}
+\item{Added peak lists to the \hyperref[table:result]{Result
+    class}, for marking the location of reflections.}
+\end{itemize}
+
 \subsection{Version 1.4}
 \begin{itemize}
 \item{Introduced the concept of \hyperref[sec:scans]{implicit axes}. }
