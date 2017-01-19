@@ -105,7 +105,7 @@
  X-ray Imaging}\\[0.2cm]
 \end{spacing}
 \HRule \\[1.0cm]
-{\Large \color{softBlue} \sffamily Version 1.5}\\[4.5cm]
+{\Large \color{softBlue} \sffamily Version 1.6}\\[4.5cm]
 
 {\Large \color{softBlue} \sffamily Filipe R. N. C. Maia}\\[0.3cm]
 {\Large \color{softBlue} \sffamily \today}
@@ -210,7 +210,7 @@ This file exemplifies the use of \hyperref[sec:scans]{Scans}.
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=0.7\textwidth]{tomography_cxi.pdf}
+%\includegraphics[width=0.7\textwidth]{tomography_cxi.pdf}
 \caption{Diagram of a CXI file for storing raw tomographic data.}
 \label{fig:tomography_raw_example}
 \end{figure}
@@ -604,7 +604,7 @@ and set the  {\em axes attribute} of the {\tt corner\_position} field to
 
 \begin{figure}[h!]
 \centering
-\includegraphics[width=0.6\textwidth]{cspad.pdf}
+%\includegraphics[width=0.6\textwidth]{cspad.pdf}
 \caption{The Cornell-SLAC Pixel Area Detector (CSPAD), an example a modular
   pixel array detector. Note that the four quadrant can move with respect to
   each other changing the size of the hole in the middle. Thus the detector
@@ -686,6 +686,32 @@ gets through (transmitted intensity)/(incident intensity).}
 
 \member{type}{Type or composition of attenuator.}
 
+\subsection{Beam}
+\label{table:beam}
+
+This class describes the properties of the X-ray beam during data collection.
+
+\begin{table}[h!]\sffamily \footnotesize
+	\caption{Beam class members}
+	
+	\rowcolors{1}{white}{tableBlue}
+	\begin{tabular}{p{4.5cm} p{4.5cm}  p{2.5cm} }
+		\toprule
+		\bfseries Member     & \bfseries Type & \bfseries Quantity \\
+		\midrule
+	   incident\_energy  & float array & variable  \\
+       incident\_wavelength & float array & variable \\
+       incident\_polarization & float array & variable \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\member{incident\_energy}{Energy of the incident beam.}
+
+\member{incident\_wavelength}{Wavelength of the incident beam.}
+
+\member{incident\_polarization}{Polarization of the incident beam.}
+
 \subsection{Data}
 \label{table:data}
 
@@ -738,14 +764,19 @@ data\_error & float array & variable \\
 data\_sum & float & variable \\
 data\_white & float array & variable \\
 description & string & text \\
-distance     & float & length\\
+distance & float\_array & variable \\
+start\_time & string & variable \\
 geometry\_1 &  \hyperref[table:geometry]{Geometry class} & \\
 mask & int array & unitless \\
 module\_identifier & string array & text \\
 score & float array & variable \\
 tags & boolean array & unitless \\
+calibration\_date & string & date \\
+calibration\_method & string & text \\
 x\_pixel\_size & float & length  \\
 y\_pixel\_size & float & length \\
+
+
 \bottomrule
 \end{tabular}
 \end{table}
@@ -786,7 +817,7 @@ has the same units as the data. Implicit axes = {\tt y:x}.}
 \member{description}{name/manufacturer/model/etc. information.}
 
 \member{distance}{Closest distance from the detector to
-the sample.}
+the sample for each of the measurements/images.}
 
 \member{geometry\_1}{Position and orientation of the center of mass of
   the detector. This should only be specified for non pixel
@@ -795,7 +826,11 @@ the sample.}
 
 \member{mask}{Not all the pixels in a detector might have the same
   value. This 32bit mask makes it possible to distinguish different
-  kinds of pixels.
+  kinds of pixels.}
+
+\member{start\_time}{Time stamp for each of the measurement/images.
+	The time stamp must follow the ISO8601 format with nanosecond
+	precision.}
 
 The following list defines the meaning of each
 bit when is it set, as well as the names of constants, defined in {\tt
@@ -1197,6 +1232,39 @@ energy\_error & float & energy \\
 \member{energy}{Peak of the spectrum that the  monochromator selects.}
 
 \member{energy\_error}{Standard deviation of the spectrum that the  monochromator selects.}
+
+\subsection{Log}
+\label{table:note}
+
+This class can be used to store time-stamped information recorded during a run. For
+example, it can be used to store readouts from environmental sensors (temperature,
+pressure) or event codes from a triggering system.
+
+\begin{table}[h!]\sffamily \footnotesize
+	\caption{Log class members}
+	
+	\rowcolors{1}{white}{tableBlue}
+	\begin{tabular}{p{4.5cm} p{4.5cm}  p{2.5cm} }
+		\toprule
+		\bfseries Member     & \bfseries Type & \bfseries Quantity \\
+		\midrule
+		time & char array & variable \\
+		value & char/float/int array & variable \\
+		raw\_value & char/float/int array & variable \\
+		description & string & text  \\
+		\bottomrule
+	\end{tabular}
+\end{table}
+
+\member{time}{Time stamp of the logged entry. Must follow the ISO 8601 format with
+nanosecond precision.}
+
+\member{value}{Logged entry.}
+
+\member{raw\_value}{Raw sensor readout used to compute the logged entry. For example
+thermocouple voltage of a temperature sensor.}
+
+\member{description}{Description of the logged value.}
 
 \subsection{Note}
 \label{table:note}
