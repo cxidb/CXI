@@ -1046,6 +1046,7 @@ storage, which should be stored in the Detector class.
 \toprule
 \bfseries Member     & \bfseries Type & \bfseries Quantity \\
 \midrule
+title &  string & text \\
 data &  float/complex array & variable \\
 data\_error & float/complex array & variable \\
 data\_space & string & text \\
@@ -1062,6 +1063,8 @@ source\_$N$ &  \hyperref[table:source]{Source class} & \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\member{title}{A title for the image.}
 
 \member{data}{The value of the image at each pixel. Implicit axes = {\tt y:x}.}
 
@@ -1370,6 +1373,9 @@ peakNPixels & int array & unitless \\
 peakSNR & float array & variable \\
 peakTotalIntensity & float array & variable \\
 peakXPosAssembled & float array & variable \\
+peakYPosAssembled & float array & variable \\
+peakXPosRaw & float array & variable \\
+peakYPosRaw & float array & variable \\
 data &  float/complex array & variable \\
 process\_$N$ &  \hyperref[table:process]{Process class} & \\
 source\_$N$ &  \hyperref[table:source]{Source class} & \\
